@@ -3,6 +3,15 @@ import { Github, Linkedin, Mail } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState } from "react";
 
+const letterAnimation = {
+  hidden: { opacity: 0, y: 50 },
+  visible: (index) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: index * 0.05 },
+  }),
+};
+
 const Hero = () => {
   const [showResume, setShowResume] = useState(false);
 
@@ -13,6 +22,8 @@ const Hero = () => {
   const handleCloseResume = () => {
     setShowResume(false); // Close the resume preview
   };
+
+  const title = "Full Stack Developer | AI/ML Engineer".split("");
 
   return (
     <section className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-primary to-secondary/20">
@@ -27,14 +38,38 @@ const Hero = () => {
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-clip-text text-black dark:text-white">
+          {/* Name */}
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 bg-clip-text text-black dark:text-white">
             Nikhil Ranga
           </h1>
-          <p className="text-xl md:text-2xl mb-8 text-black-100">
-            Full Stack Developer | AI/ML Engineer
+
+          {/* Career Objective */}
+          <p className="text-base sm:text-lg md:text-xl mb-4 text-gray-700 dark:text-gray-300">
+            Passionate full-stack developer with expertise in React and React
+            Native, dedicated to creating innovative web and mobile solutions.
+            Committed to continuous learning and delivering high-quality,
+            user-centric applications.
           </p>
 
-          {/* Responsive buttons */}
+          {/* Animated Title */}
+          <motion.div
+            className="text-lg sm:text-xl md:text-2xl font-semibold mb-8 text-black dark:text-white flex justify-center gap-1 flex-wrap"
+            initial="hidden"
+            animate="visible"
+          >
+            {title.map((char, index) => (
+              <motion.span
+                key={index}
+                custom={index}
+                variants={letterAnimation}
+                className="inline-block"
+              >
+                {char === " " ? "\u00A0" : char}
+              </motion.span>
+            ))}
+          </motion.div>
+
+          {/* Social Links */}
           <div className="flex flex-wrap justify-center gap-4 mb-8">
             <Button
               variant="outline"
@@ -100,7 +135,7 @@ const Hero = () => {
               </button>
 
               <motion.img
-                src="/public/NR-resume.png" // Replace with your resume image path
+                src="/NR-resume.png" // Replace with your resume image path
                 alt="Resume"
                 className="w-full max-w-3xl mx-auto mt-8 rounded-lg shadow-lg"
                 initial={{ opacity: 0 }}
