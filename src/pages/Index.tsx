@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
 import Footer from "@/components/Footer";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import GitHubContributions from "@/components/GitHubContributions";
 
 const Index = () => {
   const [loading, setLoading] = useState(true);
@@ -82,6 +83,7 @@ const Index = () => {
             <Experience />
             <Skills />
             <Projects />
+            <GitHubContributions />
             <Footer />
           </main>
         </div>
