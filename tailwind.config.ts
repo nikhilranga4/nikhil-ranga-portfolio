@@ -63,6 +63,8 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fadeIn 0.5s ease-out forwards",
         "slide-up": "slideUp 0.5s ease-out forwards",
+        marquee: "marquee var(--duration) linear infinite",
+        "marquee-vertical": "marquee-vertical var(--duration) linear infinite",
         float: "float 3s ease-in-out infinite",
         "background-shine": "background-shine 2s linear infinite",
         "dot-pulse": "dot-pulse 1.5s ease-in-out infinite",
@@ -83,6 +85,14 @@ export default {
         "background-shine": {
           "from": { backgroundPosition: "200% 0" },
           "to": { backgroundPosition: "-200% 0" },
+        },
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(calc(-100% - var(--gap)))" },
+        },
+        "marquee-vertical": {
+          from: { transform: "translateY(0)" },
+          to: { transform: "translateY(calc(-100% - var(--gap)))" },
         },
         "dot-pulse": {
           "0%": { transform: "scale(1)", opacity: "0.7" },

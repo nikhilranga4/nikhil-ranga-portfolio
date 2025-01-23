@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import Marquee from "./ui/marquee";
 
 const skills = [
   {
@@ -124,16 +125,40 @@ const skills = [
   }
 ];
 
-const Skills = () => {
+const SkillCard = ({ skill }: { skill: typeof skills[0] }) => {
   return (
-    <section className="py-20 relative" id="skills">
+    <div className="relative w-48 sm:w-64 cursor-pointer overflow-hidden rounded-xl border p-3 mx-2
+                    border-gray-950/[.1] bg-gray-950/[.01] hover:bg-gray-950/[.05]
+                    dark:border-gray-50/[.1] dark:bg-gray-50/[.10] dark:hover:bg-gray-50/[.15]">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-700 p-2 shadow-md">
+          <img
+            src={skill.icon}
+            alt={skill.name}
+            className="w-full h-full object-contain"
+          />
+        </div>
+        <div className="flex flex-col">
+          <h3 className="text-base font-semibold">{skill.name}</h3>
+          <p className="text-xs text-muted-foreground">{skill.category}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Skills = () => {
+  const firstRow = skills.slice(0, skills.length / 2);
+  const secondRow = skills.slice(skills.length / 2);
+
+  return (
+    <section className="py-12 sm:py-20 relative" id="skills">
       <div
         className="absolute inset-0 -z-10 dark:bg-gray-900/50 bg-white/50 backdrop-blur-xl"
         style={{
           backgroundImage: `radial-gradient(circle at center, rgba(var(--primary-rgb), 0.1) 0%, transparent 70%)`,
         }}
       >
-        {/* Animated connecting lines */}
         <svg className="absolute inset-0 w-full h-full">
           <defs>
             <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
@@ -150,44 +175,31 @@ const Skills = () => {
         </svg>
       </div>
 
-      <div className="container relative z-10">
+      <div className="container relative z-10 px-4 sm:px-6">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-4xl font-bold text-center mb-12"
+          className="text-3xl sm:text-4xl font-bold text-center mb-8 sm:mb-12"
         >
           Skills
         </motion.h2>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {skills.map((skill, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, scale: 0.5 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.1 }}
-              className="group"
-            >
-              <div className="relative p-6 rounded-xl backdrop-blur-sm border border-white/20 dark:border-white/10 bg-white/50 dark:bg-gray-800/50 hover:shadow-lg transition-all duration-300">
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/20 to-transparent dark:from-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="relative flex flex-col gap-6 overflow-hidden">
+          <Marquee pauseOnHover className="[--duration:30s]">
+            {firstRow.map((skill, index) => (
+              <SkillCard key={index} skill={skill} />
+            ))}
+          </Marquee>
+          <Marquee reverse pauseOnHover className="[--duration:30s]">
+            {secondRow.map((skill, index) => (
+              <SkillCard key={index} skill={skill} />
+            ))}
+          </Marquee>
 
-                <div className="relative flex flex-col items-center">
-                  <div
-                    className="w-16 h-16 mb-4 p-3 rounded-lg bg-white dark:bg-gray-700 shadow-lg"
-                  >
-                    <img
-                      src={skill.icon}
-                      alt={skill.name}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <h3 className="text-lg font-semibold text-center">{skill.name}</h3>
-                  <p className="text-sm text-muted-foreground text-center">{skill.category}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+          {/* Gradient overlays */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-background" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-background" />
         </div>
       </div>
     </section>
