@@ -1,21 +1,21 @@
 import { Github, Linkedin, Mail, Phone, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import countapi from "countapi-js";
 
 const Footer = () => {
-  const [visitorCount, setVisitorCount] = useState(0);
+  const [visitorCount, setVisitorCount] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchVisitorCount = async () => {
       try {
-        const response = await fetch(
-          "https://api.countapi.xyz/hit/nikhilranga-portfolio/visits"
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch visitor count");
-        }
-        const data = await response.json();
-        setVisitorCount(data.value);
+        // Replace with your unique namespace and key for tracking
+        const namespace = "nikhil-ranga.netlify.app";
+        const key = "visits";
+
+        // Increment the count and fetch the updated value
+        const result = await countapi.hit(namespace, key);
+        setVisitorCount(result.value);
       } catch (error) {
         console.error("Error fetching visitor count:", error);
         setVisitorCount(1); // Fallback value if the API fails
@@ -82,7 +82,9 @@ const Footer = () => {
               transition={{ delay: 0.3, type: "spring", stiffness: 100 }}
               className="font-semibold"
             >
-              {visitorCount.toLocaleString()} visitors
+              {visitorCount !== null
+                ? `${visitorCount.toLocaleString()} visitors`
+                : "Loading..."}
             </motion.span>
           </div>
           <p className="text-sm text-muted-foreground">
