@@ -62,8 +62,8 @@ const Education = () => {
                   <h3 className="text-xl font-semibold mb-1">{edu.school}</h3>
                   <p className="text-muted-foreground mb-2">{edu.degree}</p>
                   <div className="flex justify-between text-sm">
-                    <span className="text-primary text-red-800">{edu.period}</span>
-                    <span className="font-medium text-blue-800">{edu.grade}</span>
+                    <span className="text-primary text-red-900">{edu.period}</span>
+                    <span className="font-medium text-green-900">{edu.grade}</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{edu.location}</p>
                 </div>
