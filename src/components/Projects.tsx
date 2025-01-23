@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { Card } from "./ui/card";
+import React from "react";
+import HTMLFlipBook from "react-pageflip";
 import { Button } from "./ui/button";
 import { ExternalLink, Github } from "lucide-react";
 
@@ -94,75 +94,74 @@ const projects = [
   }
 ];
 
+const Page = React.forwardRef(({ project }, ref) => (
+  <div className="demoPage p-6 bg-white dark:bg-gray-800" ref={ref}>
+    <img
+      src={project.image}
+      alt={project.title}
+      className="w-full h-48 object-cover rounded-md mb-4"
+    />
+    <h3 className="text-xl font-bold mb-2">{project.title}</h3>
+    <span className="text-sm font-semibold text-green-500 mb-4">{project.date}</span>
+    <p className="text-muted-foreground mb-4">{project.description}</p>
+
+    <div className="flex flex-wrap gap-2 mb-4">
+      {project.tags.map((tag, i) => (
+        <span
+          key={i}
+          className="px-3 py-1 bg-gradient-to-r from-gray-400 to-gray-600 text-white rounded-full text-sm"
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+
+    <div className="flex gap-4">
+      {project.demo && (
+        <Button variant="outline" size="sm" asChild>
+          <a href={project.demo} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Demo
+          </a>
+        </Button>
+      )}
+      <Button variant="outline" size="sm" asChild>
+        <a href={project.github} target="_blank" rel="noopener noreferrer">
+          <Github className="mr-2 h-4 w-4" />
+          Code
+        </a>
+      </Button>
+    </div>
+    <p className="text-black-500 font-extrabold mb-4 py-35 text-center">👋 Flip Cards to see all </p>
+  </div>
+));
+
 const Projects = () => {
   return (
     <section className="py-20 bg-background relative" id="projects">
       <div className="container">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-4xl font-bold text-center mb-12"
+        <h2 className="text-4xl font-bold text-center mb-12">Projects</h2>
+        <HTMLFlipBook
+          width={400}
+          height={600}
+          size="stretch"
+          minWidth={300}
+          maxWidth={500}
+          minHeight={400}
+          maxHeight={700}
+          drawShadow={true}
+          flippingTime={800}
+          usePortrait={true}
+          startZIndex={0}
+          autoSize={true}
+          showCover={true}
+          mobileScrollSupport={true}
+          className="mx-auto"
         >
-          Projects
-        </motion.h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {projects.map((project, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="h-full"
-            >
-              <Card
-                className="h-full overflow-hidden transition-all transform hover:scale-105 hover:z-10 hover:shadow-2xl dark:bg-gray-800/50 dark:border-gray-700"
-              >
-                <img
-                  src={project.image}
-                  alt={project.title}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-xl font-bold">{project.title}</h3>
-                    <span className="text-sm font-semibold" style={{ color: "green" }}>{project.date}</span>
-                  </div>
-                  <p className="text-muted-foreground mb-4">{project.description}</p>
-
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {project.tags.map((tag, i) => (
-                      <span
-                        key={i}
-                        className="px-3 py-1 opacity-4 bg-gradient-to-r from-gray-400 to-gray-400 text-white rounded-full text-sm"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-4 mt-auto">
-                    {project.demo && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={project.demo} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Demo
-                        </a>
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={project.github} target="_blank" rel="noopener noreferrer">
-                        <Github className="mr-2 h-4 w-4" />
-                        Code
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
+            <Page key={index} project={project} />
           ))}
-        </div>
+        </HTMLFlipBook>
       </div>
     </section>
   );
