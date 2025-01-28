@@ -5,6 +5,15 @@ import { ExternalLink, Github } from "lucide-react";
 
 const projects = [
   {
+    title: "Leaderboard points",
+    description: "Leaderboard using ReactJS TypeScript and ViteJS.User can add members into the table and ask for points to each, so this code will produce random points for selected member randomly and based on points the members will be updated in the points table ",
+    image: "/leaderboard.png",
+    demo: "https://leaderboard8.netlify.app/",
+    github: "https://github.com/nikhilranga4/Leaderboard-frontend",
+    date: "Jan 2025",
+    tags: ["React", "TypeScript", "Vite", "NodeJs"]
+  },
+  {
     title: "Reddit Clone",
     description: "Reddit clone using ReactJS, TypeScript and ViteJS with Reddit backend API. Features post fetching based on topics and search functionality.",
     image: "/reddit-clone.png",
