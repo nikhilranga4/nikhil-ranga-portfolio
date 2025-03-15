@@ -5,7 +5,7 @@ import { Briefcase, Users } from "lucide-react";
 const experiences = [
   {
     title: "Full Stack Developer Intern",
-    company: "SimplifyTech",
+    company: "SimplifyTech In",
     location: "Virtual",
     period: "Feb 2025 - Currently",
     description: "The internship focusing on New T3 stack(Next js, Next auth,prisma,Trpc and Tailwind css. Currently I'm working on the live client project,we are using the T3 tech stack for it and AWS for database,this is the advance live project includes both front-end and back-end development fully",
