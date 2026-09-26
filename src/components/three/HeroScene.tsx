@@ -112,15 +112,17 @@ interface HeroSceneProps {
   /** Pause rendering when the hero is scrolled out of view */
   active?: boolean;
   compact?: boolean;
+  /** Camera distance; larger pulls the scene back */
+  distance?: number;
   colors: PaletteColors;
 }
 
-const HeroScene = ({ active = true, compact = false, colors }: HeroSceneProps) => {
+const HeroScene = ({ active = true, compact = false, distance, colors }: HeroSceneProps) => {
   return (
     <Canvas
       frameloop={active ? "always" : "never"}
       dpr={[1, 1.75]}
-      camera={{ position: [0, 0, compact ? 8.5 : 7], fov: 45 }}
+      camera={{ position: [0, 0, distance ?? (compact ? 8.5 : 7)], fov: 45 }}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       style={{ background: "transparent" }}
     >
