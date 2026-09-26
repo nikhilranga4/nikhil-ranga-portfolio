@@ -18,7 +18,7 @@ interface Stage3DProps {
  */
 const Stage3D = ({ colors, cursor, robot, reduceMotion }: Stage3DProps) => {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-[70]">
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-[70] transition-opacity duration-300 [html.menu-open_&]:opacity-0">
       <Canvas
         dpr={[1, 1.5]}
         camera={{ position: [0, 0, 10], fov: 35 }}

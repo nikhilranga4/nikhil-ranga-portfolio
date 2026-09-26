@@ -94,6 +94,8 @@ export default {
         "pulse-ring": "pulse-ring 2s cubic-bezier(0.2, 0.6, 0.4, 1) infinite",
         "scroll-dot": "scroll-dot 1.8s ease-in-out infinite",
         tumble: "tumble 18s linear infinite",
+        "orbit-ring": "orbit-ring 22s linear infinite",
+        "orbit-counter": "orbit-counter 22s linear infinite",
       },
       keyframes: {
         "accordion-down": {
@@ -145,6 +147,14 @@ export default {
         "pulse-ring": {
           "0%": { transform: "scale(0.8)", opacity: "0.8" },
           "100%": { transform: "scale(2.2)", opacity: "0" },
+        },
+        "orbit-ring": {
+          from: { transform: "rotateX(62deg) rotateZ(0deg)" },
+          to: { transform: "rotateX(62deg) rotateZ(360deg)" },
+        },
+        "orbit-counter": {
+          from: { transform: "rotateZ(0deg) rotateX(-62deg)" },
+          to: { transform: "rotateZ(-360deg) rotateX(-62deg)" },
         },
         tumble: {
           from: { transform: "rotateX(0deg) rotateY(0deg) rotateZ(0deg)" },

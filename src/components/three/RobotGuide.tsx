@@ -126,7 +126,7 @@ const RobotGuide = ({ colors, reduceMotion }: RobotGuideProps) => {
 
   const mobile = size.width < 768;
   const unit = viewport.width / size.width;
-  const heightPx = mobile ? 100 : Math.min(size.height * 0.2, 185);
+  const heightPx = mobile ? 88 : Math.min(size.height * 0.2, 185);
 
   useFrame((state, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05);

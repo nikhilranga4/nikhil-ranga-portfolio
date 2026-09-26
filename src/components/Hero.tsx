@@ -1,10 +1,21 @@
 import { Component, Suspense, lazy, useEffect, useRef, useState, type ReactNode } from "react";
-import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
-import { ArrowDown, FileText, Github, Linkedin, Mail, Sparkles } from "lucide-react";
+import {
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from "framer-motion";
+import { ArrowUpRight, Briefcase, FileText, Github, Linkedin, Mail, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/components/theme-provider";
 import { Magnetic } from "@/components/ui/magnetic";
+import Marquee from "@/components/ui/marquee";
+import { BentoTile } from "@/components/hero/BentoTile";
+import TechOrbit from "@/components/hero/TechOrbit";
 
 // Start fetching the 3D chunk immediately so it's ready by the time the loader finishes
 const heroSceneImport = import("@/components/three/HeroScene");
@@ -19,40 +30,10 @@ const SOCIALS = [
   { href: "mailto:nikhilranga43@gmail.com", label: "Email", icon: Mail },
 ];
 
-const FLOATING_CHIPS = [
-  { label: "⚛️ React", className: "left-[38%] top-[3%]", delay: "0s", scatter: [-60, -220] },
-  { label: "🐍 Python", className: "right-[0%] top-[62%]", delay: "-2s", scatter: [260, 40] },
-  { label: "🤖 AI/ML", className: "left-[0%] top-[46%]", delay: "-4s", scatter: [-280, -60] },
-  { label: "🟢 Node.js", className: "left-[36%] bottom-[2%]", delay: "-1s", scatter: [40, 220] },
-];
-
-/** A tech chip that floats in place, then flies outward as the hero scrolls away. */
-const ScatterChip = ({
-  chip,
-  progress,
-}: {
-  chip: (typeof FLOATING_CHIPS)[number];
-  progress: ReturnType<typeof useSpring>;
-}) => {
-  const x = useTransform(progress, [0, 1], [0, chip.scatter[0]]);
-  const y = useTransform(progress, [0, 1], [0, chip.scatter[1]]);
-  const rotate = useTransform(progress, [0, 1], [0, chip.scatter[0] > 0 ? 40 : -40]);
-  return (
-    <motion.span style={{ x, y, rotate }} className={`absolute ${chip.className}`}>
-      <span
-        className="chip glass block animate-float-3d px-4 py-2 text-sm text-foreground shadow-lg"
-        style={{ animationDelay: chip.delay }}
-      >
-        {chip.label}
-      </span>
-    </motion.span>
-  );
-};
-
 /** Gradient-orb fallback while the 3D chunk loads, or if WebGL is unavailable. */
 const SceneFallback = () => (
   <div className="flex h-full w-full items-center justify-center">
-    <div className="h-64 w-64 animate-float rounded-full bg-candy opacity-80 blur-2xl" />
+    <div className="h-40 w-40 animate-float rounded-full bg-candy opacity-80 blur-2xl" />
   </div>
 );
 
@@ -92,6 +73,24 @@ function useTypewriter(words: string[]) {
   return text;
 }
 
+/** Number that counts up from 0 on mount. */
+const CountUp = ({ to, suffix = "", delay = 0 }: { to: number; suffix?: string; delay?: number }) => {
+  const value = useMotionValue(0);
+  const rounded = useTransform(value, (v) => `${Math.round(v)}${suffix}`);
+  useEffect(() => {
+    const controls = animate(value, to, { duration: 1.6, delay, ease: [0.16, 1, 0.3, 1] });
+    return () => controls.stop();
+  }, [value, to, delay]);
+  return <motion.span>{rounded}</motion.span>;
+};
+
+const PulseDot = () => (
+  <span className="relative flex h-2 w-2">
+    <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-brand-4" />
+    <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-4" />
+  </span>
+);
+
 const Hero = () => {
   const [showResume, setShowResume] = useState(false);
   const [inView, setInView] = useState(true);
@@ -101,16 +100,11 @@ const Hero = () => {
   const { colors } = useTheme();
   const reduceMotion = useReducedMotion();
 
-  // Scroll-out choreography: copy lifts away, 3D scene shrinks and tilts back
-  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end start"] });
+  // Scroll-out: once the whole hero has been seen, the bento tiles drift apart as it leaves
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["end end", "end start"] });
   const progress = useSpring(scrollYProgress, { stiffness: 80, damping: 20, mass: 0.4 });
-  const copyY = useTransform(progress, [0, 1], [0, -180]);
-  const copyOpacity = useTransform(progress, [0, 0.7], [1, 0]);
-  const copyBlur = useTransform(progress, [0, 0.8], ["blur(0px)", "blur(8px)"]);
-  const sceneScale = useTransform(progress, [0, 1], [1, 0.6]);
-  const sceneRotateX = useTransform(progress, [0, 1], [0, 35]);
-  const sceneY = useTransform(progress, [0, 1], [0, 160]);
-  const sceneOpacity = useTransform(progress, [0.4, 1], [1, 0]);
+  const spread = isMobile ? 0.35 : 1;
+  const explode = (x: number, y: number, r: number): [number, number, number] => [x * spread, y * spread, r];
 
   useEffect(() => {
     if (!sectionRef.current) return;
@@ -127,54 +121,32 @@ const Hero = () => {
     <section
       ref={sectionRef}
       id="home"
-      className="relative flex min-h-[100svh] items-center overflow-hidden pb-16 pt-20 lg:pt-28"
+      className="relative flex items-center overflow-hidden pb-16 pt-24 lg:min-h-[100svh] lg:pt-28"
     >
-      <div className="container relative grid items-center gap-8 lg:grid-cols-[1.1fr_1fr]">
-        {/* 3D scene — stacked above the copy on small screens */}
-        <motion.div
-          style={
-            reduceMotion
-              ? undefined
-              : { scale: sceneScale, rotateX: sceneRotateX, y: sceneY, opacity: sceneOpacity, transformPerspective: 1000 }
-          }
-          className="relative -mx-5 h-[300px] sm:h-[400px] lg:order-2 lg:mx-0 lg:h-[600px]"
+      <div className="container relative grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-12">
+        {/* ── Intro ─────────────────────────────────────────── */}
+        <BentoTile
+          index={0}
+          progress={progress}
+          explode={explode(-220, -60, -6)}
+          tilt={4}
+          className="col-span-2 lg:col-span-7 lg:row-span-2"
+          innerClassName="flex flex-col justify-center p-6 sm:p-9 xl:p-11"
         >
-          <SceneBoundary>
-            <Suspense fallback={<SceneFallback />}>
-              <HeroScene active={inView} compact={isMobile} colors={colors} />
-            </Suspense>
-          </SceneBoundary>
-          <div className="hidden lg:block">
-            {FLOATING_CHIPS.map((chip) => (
-              <ScatterChip key={chip.label} chip={chip} progress={progress} />
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Copy */}
-        <motion.div
-          style={reduceMotion ? undefined : { y: copyY, opacity: copyOpacity, filter: copyBlur }}
-          className="relative z-10 -mt-6 text-center lg:order-1 lg:mt-0 lg:text-left"
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.8 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: "spring", stiffness: 200, damping: 15 }}
-            className="chip glass mb-6 px-4 py-2 text-sm text-foreground"
-          >
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-brand-4" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand-4" />
-            </span>
-            <span>
-              <span className="inline-block origin-[70%_70%] animate-wiggle [animation-delay:1s] [animation-iteration-count:3]">
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <span className="chip px-3.5 py-1.5 text-xs text-foreground sm:text-sm">
+              <span className="inline-block origin-[70%_70%] animate-wiggle [animation-delay:1.2s] [animation-iteration-count:3]">
                 👋
-              </span>{" "}
+              </span>
               Hey there, I&apos;m
             </span>
-          </motion.div>
+            <span className="chip px-3.5 py-1.5 text-xs text-brand-4 sm:text-sm">
+              <PulseDot />
+              Available for work
+            </span>
+          </div>
 
-          <h1 className="perspective mb-5 font-display text-[3.4rem] font-extrabold leading-[0.95] sm:text-7xl xl:text-[6.5rem]">
+          <h1 className="perspective mb-4 font-display text-[clamp(3.1rem,15vw,4.75rem)] font-extrabold leading-[0.92] tracking-tight sm:text-7xl xl:text-[6.5rem]">
             {NAME.map((word, w) => (
               <span key={word} className={`block ${w === 1 ? "text-gradient" : ""}`}>
                 {word.split("").map((char) => {
@@ -184,7 +156,7 @@ const Hero = () => {
                       key={i}
                       initial={{ opacity: 0, y: 80, rotateX: -90 }}
                       animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                      transition={{ type: "spring", stiffness: 180, damping: 12, delay: 0.25 + i * 0.05 }}
+                      transition={{ type: "spring", stiffness: 180, damping: 12, delay: 0.35 + i * 0.05 }}
                       whileHover={{ y: -14, rotate: i % 2 ? 8 : -8, scale: 1.12 }}
                       className="inline-block origin-bottom cursor-default"
                     >
@@ -199,80 +171,168 @@ const Hero = () => {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.9 }}
-            className="mb-6 font-mono text-lg font-medium sm:text-2xl"
+            transition={{ delay: 1 }}
+            className="mb-5 min-h-[1.75em] font-mono text-base font-medium sm:text-xl"
           >
-            <span className="text-brand-2">&gt;</span>{" "}
-            <span className="text-foreground">{role}</span>
+            <span className="text-brand-2">&gt;</span> <span className="text-foreground">{role}</span>
             <span className="ml-0.5 inline-block h-[1.1em] w-[3px] translate-y-1 animate-pulse bg-brand-1" />
           </motion.p>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.05, duration: 0.6 }}
-            className="mx-auto mb-10 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg lg:mx-0"
+            transition={{ delay: 1.1, duration: 0.6 }}
+            className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
           >
-            Passionate full-stack developer with expertise in React and React Native, dedicated to
-            creating innovative web and mobile solutions. Committed to continuous learning and
-            delivering high-quality, user-centric applications.
+            Passionate full-stack developer with expertise in React and React Native, dedicated to creating
+            innovative web and mobile solutions. Committed to continuous learning and delivering high-quality,
+            user-centric applications.
           </motion.p>
+        </BentoTile>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2, duration: 0.6 }}
-            className="flex flex-col items-center gap-5 sm:flex-row lg:justify-start sm:justify-center"
-          >
-            <Magnetic>
-              <motion.button
-                type="button"
-                onClick={() => setShowResume(true)}
-                whileTap={{ scale: 0.94 }}
-                className="bg-candy group relative inline-flex animate-gradient-x items-center gap-2 rounded-full px-7 py-4 font-display text-base font-bold text-white shadow-glow-1"
-              >
-              <FileText className="h-5 w-5 transition-transform group-hover:-rotate-12" />
-              View Resume
-              <Sparkles className="h-4 w-4 transition-transform group-hover:rotate-45 group-hover:scale-125" />
-              </motion.button>
-            </Magnetic>
+        {/* ── Live 3D scene ─────────────────────────────────── */}
+        <BentoTile
+          index={1}
+          progress={progress}
+          explode={explode(240, -60, 8)}
+          tilt={8}
+          className="col-span-2 h-64 sm:h-80 lg:col-span-5 lg:row-span-2 lg:h-auto lg:min-h-[26rem]"
+          innerClassName="overflow-hidden rounded-[2rem]"
+        >
+          <div className="absolute inset-0">
+            <SceneBoundary>
+              <Suspense fallback={<SceneFallback />}>
+                <HeroScene active={inView} compact={isMobile} colors={colors} />
+              </Suspense>
+            </SceneBoundary>
+          </div>
+          <span className="chip pointer-events-none absolute left-4 top-4 text-brand-3">// live 3D</span>
+          <span className="chip pointer-events-none absolute bottom-4 right-4 hidden text-muted-foreground sm:inline-flex">
+            move your mouse ✦
+          </span>
+        </BentoTile>
 
-            <div className="flex gap-3">
-              {SOCIALS.map(({ href, label, icon: Icon }, i) => (
-                <motion.a
-                  key={label}
-                  href={href}
-                  target={href.startsWith("http") ? "_blank" : undefined}
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 14, delay: 1.35 + i * 0.1 }}
-                  whileHover={{ y: -6, rotate: -8 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="glass flex h-14 w-14 items-center justify-center rounded-2xl text-foreground transition-colors hover:border-brand-1 hover:text-brand-1 hover:shadow-glow-1"
+        {/* ── Now ───────────────────────────────────────────── */}
+        <BentoTile
+          index={2}
+          progress={progress}
+          explode={explode(-200, 160, -10)}
+          className="col-span-1 lg:col-span-3"
+          innerClassName="flex flex-col justify-between gap-4 p-5 sm:p-6"
+        >
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2 font-mono text-[0.7rem] uppercase tracking-widest text-muted-foreground">
+              <PulseDot />
+              Now
+            </span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-1 to-brand-2 text-white shadow-glow-1">
+              <Briefcase className="h-4 w-4" />
+            </span>
+          </div>
+          <div>
+            <p className="font-display text-base font-bold leading-tight sm:text-lg">Full Stack Developer Intern</p>
+            <p className="mt-1 text-sm font-medium text-brand-1">@ SimplifyTech In</p>
+            <p className="mt-2 font-mono text-[0.7rem] text-muted-foreground">Feb 2025 – now · T3 stack</p>
+          </div>
+        </BentoTile>
+
+        {/* ── Stats ─────────────────────────────────────────── */}
+        <BentoTile
+          index={3}
+          progress={progress}
+          explode={explode(-40, 220, 6)}
+          className="col-span-1 lg:col-span-2"
+          innerClassName="flex flex-col justify-center gap-4 p-5 sm:p-6"
+        >
+          <div>
+            <p className="text-gradient font-display text-4xl font-extrabold leading-none sm:text-5xl">
+              <CountUp to={11} delay={0.8} />
+            </p>
+            <p className="mt-1 text-xs font-medium text-muted-foreground sm:text-sm">Projects shipped</p>
+          </div>
+          <div>
+            <p className="text-gradient font-display text-4xl font-extrabold leading-none sm:text-5xl">
+              <CountUp to={20} suffix="+" delay={1} />
+            </p>
+            <p className="mt-1 text-xs font-medium text-muted-foreground sm:text-sm">Technologies</p>
+          </div>
+        </BentoTile>
+
+        {/* ── Tech orbit ────────────────────────────────────── */}
+        <BentoTile
+          index={4}
+          progress={progress}
+          explode={explode(60, 240, -8)}
+          tilt={8}
+          className="col-span-2 h-56 lg:col-span-4 lg:h-auto lg:min-h-[13rem]"
+          innerClassName="overflow-hidden rounded-[2rem]"
+        >
+          <TechOrbit />
+          <span className="chip pointer-events-none absolute left-4 top-4 text-brand-2">// my stack</span>
+        </BentoTile>
+
+        {/* ── CTA ───────────────────────────────────────────── */}
+        <BentoTile
+          index={5}
+          progress={progress}
+          explode={explode(240, 180, 10)}
+          className="col-span-2 lg:col-span-3"
+          innerClassName="flex flex-col justify-between gap-5 overflow-hidden rounded-[2rem] p-5 sm:p-6"
+        >
+          <div className="-mx-5 -mt-1 sm:-mx-6">
+            <Marquee className="p-0 [--duration:14s] [--gap:1rem]" repeat={4}>
+              {["OPEN TO WORK", "LET'S BUILD", "SAY HI"].map((t) => (
+                <span
+                  key={t}
+                  className="flex items-center gap-4 whitespace-nowrap font-display text-xs font-bold tracking-widest text-brand-1"
                 >
-                  <Icon className="h-6 w-6" />
-                </motion.a>
+                  {t} <span aria-hidden>✦</span>
+                </span>
               ))}
-            </div>
-          </motion.div>
-        </motion.div>
+            </Marquee>
+          </div>
+
+          <Magnetic className="w-full" strength={0.2}>
+            <motion.button
+              type="button"
+              onClick={() => setShowResume(true)}
+              whileTap={{ scale: 0.95 }}
+              className="bg-candy group relative flex w-full animate-gradient-x items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 py-4 font-display text-base font-bold text-white shadow-glow-1 lg:text-sm xl:text-base"
+            >
+              <FileText className="h-5 w-5 shrink-0 transition-transform group-hover:-rotate-12" />
+              View Resume
+              <Sparkles className="h-4 w-4 shrink-0 transition-transform group-hover:rotate-45 group-hover:scale-125 lg:hidden xl:block" />
+            </motion.button>
+          </Magnetic>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            {SOCIALS.map(({ href, label, icon: Icon }, i) => (
+              <motion.a
+                key={label}
+                href={href}
+                target={href.startsWith("http") ? "_blank" : undefined}
+                rel="noopener noreferrer"
+                aria-label={label}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: "spring", stiffness: 260, damping: 14, delay: 1.2 + i * 0.1 }}
+                whileHover={{ y: -4, rotate: -6 }}
+                whileTap={{ scale: 0.9 }}
+                className="group/s relative flex h-12 items-center justify-center rounded-xl border border-border bg-background/50 text-foreground transition-colors hover:border-brand-1 hover:text-brand-1 hover:shadow-glow-1"
+              >
+                <Icon className="h-5 w-5" />
+                <ArrowUpRight className="absolute right-1.5 top-1.5 h-3 w-3 opacity-0 transition-opacity group-hover/s:opacity-100" />
+              </motion.a>
+            ))}
+          </div>
+        </BentoTile>
       </div>
 
-      <a
-        href="#about"
-        aria-label="Scroll down"
-        className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-muted-foreground transition-colors hover:text-brand-1 sm:flex"
-      >
-        <span className="flex h-10 w-6 justify-center rounded-full border-2 border-current pt-2">
-          <span className="h-2 w-1 animate-scroll-dot rounded-full bg-current" />
-        </span>
-        <ArrowDown className="h-4 w-4 animate-bounce" />
-      </a>
-
       <Dialog open={showResume} onOpenChange={setShowResume}>
-        <DialogContent data-lenis-prevent className="glass max-h-[90vh] max-w-3xl overflow-y-auto rounded-3xl border-0 p-3 sm:p-4">
+        <DialogContent
+          data-lenis-prevent
+          className="glass max-h-[90vh] max-w-3xl overflow-y-auto rounded-3xl border-0 p-3 sm:p-4"
+        >
           <DialogTitle className="px-2 pt-1 font-display text-xl">
             <span className="text-gradient">Resume</span>
           </DialogTitle>
