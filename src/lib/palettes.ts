@@ -13,7 +13,7 @@ export const PALETTES = [
 
 export type PaletteId = (typeof PALETTES)[number]["id"];
 
-export const DEFAULT_PALETTE: PaletteId = "candy";
+export const DEFAULT_PALETTE: PaletteId = "ocean";
 
 export const isPaletteId = (value: unknown): value is PaletteId =>
   PALETTES.some((p) => p.id === value);
@@ -29,13 +29,13 @@ export interface PaletteColors {
 }
 
 export const FALLBACK_COLORS: PaletteColors = {
-  c1: "#ff3ea5",
-  c2: "#8b5cf6",
-  c3: "#22d3ee",
-  c4: "#a3e635",
-  c5: "#fbbf24",
-  background: "#0b0618",
-  foreground: "#f8f5ff",
+  c1: "#4289fa",
+  c2: "#7274f3",
+  c3: "#08d3f7",
+  c4: "#43e5c5",
+  c5: "#4cc3fa",
+  background: "#060b18",
+  foreground: "#f4f7fb",
 };
 
 function hslToHex(h: number, s: number, l: number) {

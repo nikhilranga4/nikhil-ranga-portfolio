@@ -107,6 +107,19 @@ const CountUp = ({ to, suffix = "", delay = 0 }: { to: number; suffix?: string; 
   return <motion.span>{rounded}</motion.span>;
 };
 
+/** One letter of the name: rises softly into place and lifts a little on hover. */
+const NameLetter = ({ char, index }: { char: string; index: number }) => (
+  <motion.span
+    initial={{ opacity: 0, y: "0.55em" }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ type: "spring", stiffness: 120, damping: 16, delay: 0.35 + index * 0.035 }}
+    whileHover={{ y: "-0.08em", scale: 1.06 }}
+    className="inline-block cursor-default"
+  >
+    {char}
+  </motion.span>
+);
+
 const PulseDot = () => (
   <span className="relative flex h-2 w-2 shrink-0">
     <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-brand-4" />
@@ -227,26 +240,57 @@ const Hero = () => {
                     </span>
                   </motion.div>
 
-                  <h1 className="perspective mb-4 font-display text-[clamp(3.2rem,16vw,5rem)] font-extrabold leading-[0.9] tracking-tight sm:text-8xl xl:text-[7.5rem]">
-                    {NAME.map((word, w) => (
-                      <span key={word} className={`block ${w === 1 ? "text-gradient" : ""}`}>
-                        {word.split("").map((char) => {
+                  <h1
+                    aria-label="Nikhil Ranga"
+                    className="mb-5 font-display text-[clamp(3.4rem,17vw,5.5rem)] font-extrabold leading-[1.02] tracking-[-0.03em] lg:whitespace-nowrap lg:text-[clamp(4rem,6.2vw,6.25rem)]"
+                  >
+                    <span aria-hidden className="block text-foreground lg:inline">
+                      {NAME[0].split("").map((char) => {
+                        const i = letterIndex++;
+                        return <NameLetter key={i} char={char} index={i} />;
+                      })}
+                    </span>
+                    <span aria-hidden className="relative inline-block lg:ml-[0.22em]">
+                      {/* padding keeps the gradient painting area below the descender of "g" */}
+                      <span className="text-gradient inline-block pb-[0.16em] -mb-[0.16em]">
+                        {NAME[1].split("").map((char) => {
                           const i = letterIndex++;
-                          return (
-                            <motion.span
-                              key={i}
-                              initial={{ opacity: 0, y: 80, rotateX: -90 }}
-                              animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                              transition={{ type: "spring", stiffness: 180, damping: 12, delay: 0.4 + i * 0.05 }}
-                              whileHover={{ y: -14, rotate: i % 2 ? 8 : -8, scale: 1.12 }}
-                              className="inline-block origin-bottom cursor-default"
-                            >
-                              {char}
-                            </motion.span>
-                          );
+                          return <NameLetter key={i} char={char} index={i} />;
                         })}
                       </span>
-                    ))}
+                      {/* soft light sweeping across the gradient word */}
+                      <motion.span
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.3 }}
+                        className="pointer-events-none absolute inset-0 animate-shine bg-[linear-gradient(110deg,transparent_38%,rgba(255,255,255,0.8)_50%,transparent_62%)] bg-[length:250%_100%] bg-clip-text pb-[0.16em] text-transparent"
+                      >
+                        {NAME[1]}
+                      </motion.span>
+                      {/* hand-drawn underline that draws itself */}
+                      <svg
+                        viewBox="0 0 300 24"
+                        preserveAspectRatio="none"
+                        className="pointer-events-none absolute -bottom-[0.14em] left-[2%] h-[0.22em] w-[96%] overflow-visible"
+                      >
+                        <defs>
+                          <linearGradient id="name-underline" x1="0" x2="1" y1="0" y2="0">
+                            <stop offset="0%" stopColor="hsl(var(--brand-3))" />
+                            <stop offset="100%" stopColor="hsl(var(--brand-1))" />
+                          </linearGradient>
+                        </defs>
+                        <motion.path
+                          d="M4 15 C 55 5, 105 21, 160 11 S 255 5, 296 13"
+                          fill="none"
+                          stroke="url(#name-underline)"
+                          strokeWidth="6"
+                          strokeLinecap="round"
+                          initial={{ pathLength: 0, opacity: 0 }}
+                          animate={{ pathLength: 1, opacity: 1 }}
+                          transition={{ delay: 1.05, duration: 0.9, ease: [0.65, 0, 0.35, 1] }}
+                        />
+                      </svg>
+                    </span>
                   </h1>
 
                   <motion.p variants={item} className="mb-5 min-h-[1.75em] font-mono text-base font-medium sm:text-xl lg:text-2xl">

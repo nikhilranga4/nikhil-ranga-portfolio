@@ -30,37 +30,38 @@
     --radius: 1.25rem;
   }
 
+  /* Fallback (no data-palette yet): Ocean Depths, the default theme */
   :root {
-    --background: 270 100% 98.5%;
-    --foreground: 260 45% 12%;
+    --background: 210 100% 97.5%;
+    --foreground: 224 60% 12%;
     --surface: 0 0% 100%;
-    --muted: 268 60% 94%;
-    --muted-foreground: 260 14% 40%;
-    --border: 266 40% 86%;
-    --brand-1: 328 90% 52%;
-    --brand-2: 262 83% 58%;
-    --brand-3: 190 90% 40%;
-    --brand-4: 84 75% 38%;
-    --brand-5: 32 95% 50%;
+    --muted: 214 70% 93%;
+    --muted-foreground: 220 15% 40%;
+    --border: 214 50% 86%;
+    --brand-1: 221 83% 50%;
+    --brand-2: 239 70% 56%;
+    --brand-3: 190 90% 36%;
+    --brand-4: 168 70% 32%;
+    --brand-5: 199 89% 42%;
     --glass-bg: 0 0% 100% / 0.6;
-    --glass-border: 262 60% 60% / 0.18;
-    --grid-line: 262 60% 50% / 0.08;
+    --glass-border: 220 80% 40% / 0.16;
+    --grid-line: 220 80% 40% / 0.08;
   }
   .dark {
-    --background: 262 60% 6%;
-    --foreground: 270 40% 97%;
-    --surface: 262 45% 9%;
-    --muted: 262 30% 16%;
-    --muted-foreground: 262 18% 72%;
-    --border: 262 30% 20%;
-    --brand-1: 328 100% 62%;
-    --brand-2: 258 90% 66%;
-    --brand-3: 188 86% 53%;
-    --brand-4: 82 85% 55%;
-    --brand-5: 38 100% 60%;
-    --glass-bg: 262 50% 14% / 0.45;
+    --background: 224 60% 6%;
+    --foreground: 210 50% 97%;
+    --surface: 224 50% 9%;
+    --muted: 222 35% 16%;
+    --muted-foreground: 215 20% 72%;
+    --border: 222 35% 20%;
+    --brand-1: 217 95% 62%;
+    --brand-2: 239 84% 70%;
+    --brand-3: 189 94% 50%;
+    --brand-4: 168 76% 58%;
+    --brand-5: 199 95% 64%;
+    --glass-bg: 224 50% 13% / 0.45;
     --glass-border: 0 0% 100% / 0.09;
-    --grid-line: 270 80% 80% / 0.06;
+    --grid-line: 210 90% 75% / 0.06;
   }
 
   /* candy */
