@@ -11,7 +11,7 @@ const experiences: TimelineItem[] = [
     description:
       "The internship focusing on New T3 stack(Next js, Next auth,prisma,Trpc and Tailwind css. Currently I'm working on the live client project,we are using the T3 tech stack for it and AWS for database,this is the advance live project includes both front-end and back-end development fully",
     icon: Briefcase,
-    accent: "pink",
+    accent: 1,
   },
   {
     title: "Backend Development Intern",
@@ -20,7 +20,7 @@ const experiences: TimelineItem[] = [
     meta: ["🌐 Virtual", "🐍 Django"],
     description: "The internship focused on Django Backend Development",
     icon: Code2,
-    accent: "violet",
+    accent: 2,
   },
   {
     title: "Member",
@@ -28,7 +28,7 @@ const experiences: TimelineItem[] = [
     period: "May 2023 - Present",
     meta: ["📍 Anurag University"],
     icon: Users,
-    accent: "lime",
+    accent: 4,
   },
 ];
 

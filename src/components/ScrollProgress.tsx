@@ -8,7 +8,7 @@ const ScrollProgress = () => {
     <motion.div
       aria-hidden
       style={{ scaleX }}
-      className="bg-candy fixed inset-x-0 top-0 z-[60] h-1 origin-left shadow-glow-pink"
+      className="bg-candy fixed inset-x-0 top-0 z-[60] h-1 origin-left shadow-glow-1"
     />
   );
 };

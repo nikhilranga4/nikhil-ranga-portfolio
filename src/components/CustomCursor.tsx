@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
-import { motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
+import { motion, useMotionValue, useReducedMotion } from "framer-motion";
+import { cursorState } from "@/lib/cursor-state";
 
-/** Glowing dot + trailing ring. Only mounts for fine pointers (mouse / trackpad). */
+/**
+ * Precise glowing dot for fine pointers. It also publishes pointer / hover / press state to
+ * `cursorState`, which drives the WebGL 3D cursor ring in the global stage.
+ */
 const CustomCursor = () => {
   const reduceMotion = useReducedMotion();
   const [enabled, setEnabled] = useState(false);
   const [hovering, setHovering] = useState(false);
-  const [pressed, setPressed] = useState(false);
 
   const x = useMotionValue(-100);
   const y = useMotionValue(-100);
-  const ringX = useSpring(x, { stiffness: 260, damping: 24, mass: 0.5 });
-  const ringY = useSpring(y, { stiffness: 260, damping: 24, mass: 0.5 });
 
   useEffect(() => {
     const fine = window.matchMedia("(pointer: fine)").matches;
@@ -22,41 +23,41 @@ const CustomCursor = () => {
     const move = (e: PointerEvent) => {
       x.set(e.clientX);
       y.set(e.clientY);
+      cursorState.x = e.clientX;
+      cursorState.y = e.clientY;
+      cursorState.active = true;
       const target = e.target as HTMLElement | null;
-      setHovering(!!target?.closest("a, button, [role='button'], [data-cursor='hover']"));
+      const over = !!target?.closest("a, button, [role='button'], label, [data-cursor='hover']");
+      cursorState.hovering = over;
+      setHovering(over);
     };
-    const down = () => setPressed(true);
-    const up = () => setPressed(false);
+    const down = () => (cursorState.pressed = true);
+    const up = () => (cursorState.pressed = false);
+    const leave = () => (cursorState.active = false);
 
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerdown", down);
     window.addEventListener("pointerup", up);
+    document.documentElement.addEventListener("pointerleave", leave);
     return () => {
       document.documentElement.classList.remove("has-custom-cursor");
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerdown", down);
       window.removeEventListener("pointerup", up);
+      document.documentElement.removeEventListener("pointerleave", leave);
+      cursorState.active = false;
     };
   }, [reduceMotion, x, y]);
 
   if (!enabled) return null;
 
   return (
-    <>
-      <motion.div
-        aria-hidden
-        style={{ x: ringX, y: ringY }}
-        animate={{ scale: pressed ? 0.7 : hovering ? 1.8 : 1 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        className="pointer-events-none fixed left-0 top-0 z-[100] -ml-5 -mt-5 h-10 w-10 rounded-full border-2 border-neon-pink/70 mix-blend-difference dark:border-neon-cyan/80"
-      />
-      <motion.div
-        aria-hidden
-        style={{ x, y }}
-        animate={{ scale: hovering ? 0 : 1 }}
-        className="pointer-events-none fixed left-0 top-0 z-[100] -ml-1 -mt-1 h-2 w-2 rounded-full bg-neon-pink shadow-glow-pink"
-      />
-    </>
+    <motion.div
+      aria-hidden
+      style={{ x, y }}
+      animate={{ scale: hovering ? 0.5 : 1 }}
+      className="pointer-events-none fixed left-0 top-0 z-[100] -ml-1 -mt-1 h-2 w-2 rounded-full bg-foreground shadow-glow-1"
+    />
   );
 };
 

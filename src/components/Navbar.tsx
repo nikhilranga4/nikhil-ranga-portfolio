@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Menu } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
+import ThemePicker from "@/components/ThemePicker";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { id: "home", label: "Home" },
+  { id: "about", label: "About" },
   { id: "education", label: "Education" },
   { id: "experience", label: "Experience" },
   { id: "skills", label: "Skills" },
@@ -52,25 +54,25 @@ const Navbar = () => {
       <nav
         className={cn(
           "glass flex w-full max-w-5xl items-center justify-between gap-2 rounded-full py-2 pl-3 pr-2 transition-shadow duration-300",
-          scrolled && "shadow-[0_12px_40px_-12px_hsl(var(--neon-violet)/0.45)]"
+          scrolled && "shadow-[0_12px_40px_-12px_hsl(var(--brand-2)/0.45)]"
         )}
       >
         <a href="#home" className="group flex items-center gap-2" aria-label="Back to top">
-          <span className="bg-candy flex h-9 w-9 items-center justify-center rounded-full font-display text-sm font-extrabold text-white shadow-glow-pink transition-transform duration-300 group-hover:rotate-[20deg] group-hover:scale-110">
+          <span className="bg-candy flex h-9 w-9 items-center justify-center rounded-full font-display text-sm font-extrabold text-white shadow-glow-1 transition-transform duration-300 group-hover:rotate-[20deg] group-hover:scale-110">
             NR
           </span>
           <span className="hidden font-display text-lg font-bold sm:inline">
-            nikhil<span className="text-neon-pink">.</span>dev
+            nikhil<span className="text-brand-1">.</span>dev
           </span>
         </a>
 
-        <ul className="hidden items-center gap-1 md:flex">
+        <ul className="hidden items-center gap-0.5 lg:flex">
           {NAV_ITEMS.map((item) => (
             <li key={item.id}>
               <a
                 href={`#${item.id}`}
                 className={cn(
-                  "relative isolate block rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                  "relative isolate block rounded-full px-3.5 py-2 text-sm font-medium transition-colors lg:px-4",
                   active === item.id ? "text-white" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -78,7 +80,7 @@ const Navbar = () => {
                   <motion.span
                     layoutId="nav-pill"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    className="bg-candy absolute inset-0 -z-10 rounded-full shadow-glow-pink"
+                    className="bg-candy absolute inset-0 -z-10 rounded-full shadow-glow-1"
                   />
                 )}
                 {item.label}
@@ -88,15 +90,16 @@ const Navbar = () => {
         </ul>
 
         <div className="flex items-center gap-2">
+          <ThemePicker />
           <ModeToggle />
           <Sheet>
             <SheetTrigger
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted/70 md:hidden"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted/70 lg:hidden"
               aria-label="Open menu"
             >
               <Menu className="h-5 w-5" />
             </SheetTrigger>
-            <SheetContent side="right" className="glass border-l-0">
+            <SheetContent side="right" className="glass border-l-0" data-lenis-prevent>
               <SheetTitle className="font-display text-2xl">
                 <span className="text-gradient">Menu</span>
               </SheetTitle>

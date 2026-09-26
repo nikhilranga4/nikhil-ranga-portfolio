@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark" data-palette="candy">
 
 <head>
   <meta charset="UTF-8" />
@@ -16,6 +16,20 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300..800&display=swap"
     rel="stylesheet" />
+  <script>
+    // Apply the saved theme before first paint to avoid a flash of the wrong colours
+    (function () {
+      try {
+        var mode = localStorage.getItem("vite-ui-theme") || "dark";
+        if (mode === "system") mode = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        var palette = localStorage.getItem("vite-ui-palette");
+        var root = document.documentElement;
+        root.classList.remove("light", "dark");
+        root.classList.add(mode);
+        if (/^(candy|aurora|sunset|ocean|gold)$/.test(palette)) root.dataset.palette = palette;
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>

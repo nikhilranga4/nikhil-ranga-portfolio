@@ -3,12 +3,13 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import countapi from "countapi-js";
 import Marquee from "./ui/marquee";
+import { Magnetic } from "./ui/magnetic";
 
 const SOCIALS = [
-  { href: "https://github.com/nikhilranga4", label: "GitHub", icon: Github, color: "hover:bg-neon-violet" },
-  { href: "https://www.linkedin.com/in/nikhilranga21", label: "LinkedIn", icon: Linkedin, color: "hover:bg-neon-cyan" },
-  { href: "mailto:nikhilranga43@gmail.com", label: "Email", icon: Mail, color: "hover:bg-neon-pink" },
-  { href: "tel:+917989068826", label: "Phone", icon: Phone, color: "hover:bg-neon-lime" },
+  { href: "https://github.com/nikhilranga4", label: "GitHub", icon: Github, color: "hover:bg-brand-2" },
+  { href: "https://www.linkedin.com/in/nikhilranga21", label: "LinkedIn", icon: Linkedin, color: "hover:bg-brand-3" },
+  { href: "mailto:nikhilranga43@gmail.com", label: "Email", icon: Mail, color: "hover:bg-brand-1" },
+  { href: "tel:+917989068826", label: "Phone", icon: Phone, color: "hover:bg-brand-4" },
 ];
 
 const TICKER = ["Available for work", "Open to collaborate", "Let's build together", "React • React Native • AI/ML"];
@@ -36,9 +37,9 @@ const Footer = () => {
   }, []);
 
   return (
-    <footer className="relative mt-12 overflow-hidden">
+    <footer id="contact" className="relative mt-12 overflow-hidden">
       {/* Ticker */}
-      <div className="bg-candy -rotate-2 scale-105 py-3 text-white shadow-glow-pink">
+      <div className="bg-candy -rotate-2 scale-105 py-3 text-white shadow-glow-1">
         <Marquee className="[--duration:25s] [--gap:2rem]" repeat={4}>
           {TICKER.map((t) => (
             <span key={t} className="flex items-center gap-8 whitespace-nowrap font-display text-xl font-bold uppercase tracking-wide">
@@ -57,7 +58,7 @@ const Footer = () => {
           transition={{ type: "spring", stiffness: 80, damping: 16 }}
           className="text-center"
         >
-          <p className="chip mb-6 text-neon-pink">
+          <p className="chip mb-6 text-brand-1">
             <span className="text-muted-foreground">06</span> // contact
           </p>
           <h2 className="mx-auto max-w-4xl font-display text-4xl font-extrabold leading-[1.05] sm:text-6xl md:text-7xl">
@@ -74,15 +75,17 @@ const Footer = () => {
             Got an idea, a project or just want to say hi? My inbox is always open.
           </p>
 
-          <motion.a
-            href="mailto:nikhilranga43@gmail.com"
-            whileHover={{ scale: 1.06, rotate: -1 }}
-            whileTap={{ scale: 0.95 }}
-            className="bg-candy mt-10 inline-flex animate-gradient-x items-center gap-3 rounded-full px-8 py-4 font-display text-lg font-bold text-white shadow-glow-pink"
-          >
-            <Send className="h-5 w-5" />
-            Say hello
-          </motion.a>
+          <Magnetic className="mt-10" strength={0.4}>
+            <motion.a
+              href="mailto:nikhilranga43@gmail.com"
+              whileHover={{ scale: 1.06, rotate: -1 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-candy group inline-flex animate-gradient-x items-center gap-3 rounded-full px-8 py-4 font-display text-lg font-bold text-white shadow-glow-1"
+            >
+              <Send className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:-rotate-12" />
+              Say hello
+            </motion.a>
+          </Magnetic>
 
           <div className="mt-12 flex justify-center gap-4">
             {SOCIALS.map(({ href, label, icon: Icon, color }, i) => (
@@ -117,7 +120,7 @@ const Footer = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-neon-pink" />
+            <Users className="h-4 w-4 text-brand-1" />
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -130,10 +133,10 @@ const Footer = () => {
 
           <a
             href="#home"
-            className="group flex items-center gap-2 font-medium transition-colors hover:text-neon-pink"
+            className="group flex items-center gap-2 font-medium transition-colors hover:text-brand-1"
           >
             Back to top
-            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-border transition-transform group-hover:-translate-y-1 group-hover:border-neon-pink">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-border transition-transform group-hover:-translate-y-1 group-hover:border-brand-1">
               <ArrowUp className="h-4 w-4" />
             </span>
           </a>

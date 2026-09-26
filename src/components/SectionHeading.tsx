@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ParallaxText } from "@/components/ui/parallax-text";
 
 interface SectionHeadingProps {
   index: string;
@@ -7,19 +8,22 @@ interface SectionHeadingProps {
   title: string;
   subtitle?: string;
   className?: string;
+  /** Giant outlined word drifting behind the heading (defaults to the eyebrow) */
+  bgText?: string;
 }
 
-const SectionHeading = ({ index, eyebrow, title, subtitle, className }: SectionHeadingProps) => {
+const SectionHeading = ({ index, eyebrow, title, subtitle, className, bgText }: SectionHeadingProps) => {
   const words = title.split(" ");
 
   return (
-    <div className={cn("mb-14 text-center sm:mb-20", className)}>
+    <div className={cn("relative isolate mb-14 pt-6 text-center sm:mb-20", className)}>
+      <ParallaxText text={bgText ?? eyebrow} direction={Number(index) % 2 ? 1 : -1} className="-top-4 sm:-top-10" />
       <motion.p
         initial={{ opacity: 0, y: 12 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.6 }}
         transition={{ duration: 0.5 }}
-        className="chip mb-5 text-neon-pink"
+        className="chip mb-5 text-brand-1"
       >
         <span className="text-muted-foreground">{index}</span>
         <span>// {eyebrow}</span>

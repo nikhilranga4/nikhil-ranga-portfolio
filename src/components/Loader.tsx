@@ -32,7 +32,7 @@ const Loader = ({ onDone }: { onDone: () => void }) => {
   return (
     <motion.div
       key="loader"
-      exit={{ opacity: 0, scale: 1.08, filter: "blur(10px)" }}
+      exit={{ opacity: 0, scale: 1.6, filter: "blur(14px)" }}
       transition={{ duration: 0.5 }}
       className="fixed inset-0 z-[90] flex flex-col items-center justify-center gap-10 bg-background"
     >
@@ -42,7 +42,7 @@ const Loader = ({ onDone }: { onDone: () => void }) => {
             <div
               key={face.label}
               style={{ transform: face.transform }}
-              className="absolute inset-0 flex items-center justify-center rounded-xl border border-white/20 bg-candy font-mono text-lg font-bold text-white shadow-glow-violet backface-hidden"
+              className="absolute inset-0 flex items-center justify-center rounded-xl border border-white/20 bg-candy font-mono text-lg font-bold text-white shadow-glow-2 backface-hidden"
             >
               {face.label}
             </div>

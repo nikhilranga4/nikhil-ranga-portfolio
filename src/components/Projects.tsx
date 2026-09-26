@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRight, Github } from "lucide-react";
 import SectionHeading from "@/components/SectionHeading";
 import { TiltCard } from "@/components/ui/tilt-card";
+import { ScrollReveal3D } from "@/components/ui/scroll-reveal";
+import { Magnetic } from "@/components/ui/magnetic";
 import { cn } from "@/lib/utils";
 
 interface Project {
@@ -131,10 +133,10 @@ const categoryOf = (project: Project): Exclude<Category, "all"> => {
 };
 
 const TAG_COLORS = [
-  "text-neon-pink border-neon-pink/30",
-  "text-neon-violet border-neon-violet/30",
-  "text-neon-cyan border-neon-cyan/30",
-  "text-neon-lime border-neon-lime/30",
+  "text-brand-1 border-brand-1/30",
+  "text-brand-2 border-brand-2/30",
+  "text-brand-3 border-brand-3/30",
+  "text-brand-4 border-brand-4/30",
 ];
 
 const ProjectCard = ({ project, index, featured }: { project: Project; index: number; featured: boolean }) => (
@@ -145,7 +147,7 @@ const ProjectCard = ({ project, index, featured }: { project: Project; index: nu
         featured && "lg:flex-row lg:gap-2"
       )}
     >
-      <div className="glass absolute inset-0 rounded-3xl transition-shadow duration-500 group-hover:shadow-[0_30px_80px_-20px_hsl(var(--neon-pink)/0.45)]" />
+      <div className="glass absolute inset-0 rounded-3xl transition-shadow duration-500 group-hover:shadow-[0_30px_80px_-20px_hsl(var(--brand-1)/0.45)]" />
 
       <div
         className={cn(
@@ -177,7 +179,7 @@ const ProjectCard = ({ project, index, featured }: { project: Project; index: nu
           featured && "lg:justify-center lg:px-5"
         )}
       >
-        {featured && <span className="chip mb-3 w-fit text-neon-lime">★ Featured</span>}
+        {featured && <span className="chip mb-3 w-fit text-brand-4">★ Featured</span>}
         <h3 className={cn("mb-2 font-display font-bold leading-tight", featured ? "text-2xl sm:text-3xl" : "text-xl")}>
           {project.title}
         </h3>
@@ -195,22 +197,24 @@ const ProjectCard = ({ project, index, featured }: { project: Project; index: nu
 
         <div className="mt-auto flex gap-3">
           {project.demo && (
-            <a
-              href={project.demo}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-candy inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-glow-pink transition-transform hover:-translate-y-0.5 hover:scale-105"
-            >
-              Live demo
-              <ArrowUpRight className="h-4 w-4" />
-            </a>
+            <Magnetic strength={0.25}>
+              <a
+                href={project.demo}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-candy group/demo inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-glow-1 transition-transform hover:scale-105"
+              >
+                Live demo
+                <ArrowUpRight className="h-4 w-4 transition-transform group-hover/demo:-translate-y-0.5 group-hover/demo:translate-x-0.5" />
+              </a>
+            </Magnetic>
           )}
           {project.github && (
             <a
               href={project.github}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:border-neon-violet hover:text-neon-violet"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:border-brand-2 hover:text-brand-2"
             >
               <Github className="h-4 w-4" />
               Code
@@ -255,7 +259,7 @@ const Projects = () => {
                   <motion.span
                     layoutId="project-filter"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    className="bg-candy absolute inset-0 -z-10 rounded-full shadow-glow-pink"
+                    className="bg-candy absolute inset-0 -z-10 rounded-full shadow-glow-1"
                   />
                 )}
                 {f.label}
@@ -272,14 +276,15 @@ const Projects = () => {
                 <motion.div
                   key={project.title}
                   layout
-                  initial={{ opacity: 0, scale: 0.8, rotateX: -30, y: 40 }}
-                  whileInView={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
-                  viewport={{ once: true, amount: 0.15 }}
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8, y: 20 }}
-                  transition={{ type: "spring", stiffness: 120, damping: 16, delay: Math.min(i * 0.05, 0.4) }}
+                  transition={{ type: "spring", stiffness: 140, damping: 18 }}
                   className={cn(featured && "sm:col-span-2")}
                 >
-                  <ProjectCard project={project} index={projects.indexOf(project)} featured={featured} />
+                  <ScrollReveal3D direction={featured ? 0 : i % 3 === 0 ? -1 : i % 3 === 2 ? 1 : 0} className="h-full">
+                    <ProjectCard project={project} index={projects.indexOf(project)} featured={featured} />
+                  </ScrollReveal3D>
                 </motion.div>
               );
             })}

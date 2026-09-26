@@ -9,7 +9,7 @@ const education: TimelineItem[] = [
     period: "2020 - 2024",
     meta: ["📍 Hyderabad", "🎯 CGPA: 7.13"],
     icon: GraduationCap,
-    accent: "pink",
+    accent: 1,
   },
   {
     title: "Vishra Junior College",
@@ -17,7 +17,7 @@ const education: TimelineItem[] = [
     period: "2018 - 2020",
     meta: ["📍 Hyderabad", "🎯 Grade: 71%"],
     icon: BookOpen,
-    accent: "violet",
+    accent: 2,
   },
   {
     title: "Geethanjali High School",
@@ -25,7 +25,7 @@ const education: TimelineItem[] = [
     period: "2017 - 2018",
     meta: ["📍 Nagarkurnool", "🎯 GPA: 8.5"],
     icon: School,
-    accent: "cyan",
+    accent: 3,
   },
 ];
 

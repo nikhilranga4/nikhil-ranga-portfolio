@@ -3,71 +3,239 @@
 @tailwind utilities;
 
 @layer base {
-  /* Light — pastel lavender candy */
+  /*
+   * Colour themes. Each palette defines raw HSL tokens for light and dark mode.
+   * Selectors also match descendants carrying data-palette (used by the theme picker swatches).
+   * Derived tokens (card, primary, ring, …) are computed from these below.
+   */
+  :root,
+  [data-palette] {
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface);
+    --popover-foreground: var(--foreground);
+    --primary: var(--brand-1);
+    --primary-foreground: 0 0% 100%;
+    --secondary: var(--brand-2);
+    --secondary-foreground: 0 0% 100%;
+    --accent: var(--brand-3);
+    --accent-foreground: var(--background);
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --input: var(--border);
+    --ring: var(--brand-1);
+  }
+
+  :root {
+    --radius: 1.25rem;
+  }
+
   :root {
     --background: 270 100% 98.5%;
     --foreground: 260 45% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 260 45% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 260 45% 12%;
-    --primary: 328 90% 52%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 262 83% 58%;
-    --secondary-foreground: 0 0% 100%;
+    --surface: 0 0% 100%;
     --muted: 268 60% 94%;
     --muted-foreground: 260 14% 40%;
-    --accent: 190 90% 40%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
     --border: 266 40% 86%;
-    --input: 266 40% 86%;
-    --ring: 328 90% 52%;
-    --radius: 1.25rem;
-
-    --neon-pink: 328 90% 52%;
-    --neon-violet: 262 83% 58%;
-    --neon-cyan: 190 90% 40%;
-    --neon-lime: 84 75% 38%;
-    --neon-amber: 32 95% 50%;
-
+    --brand-1: 328 90% 52%;
+    --brand-2: 262 83% 58%;
+    --brand-3: 190 90% 40%;
+    --brand-4: 84 75% 38%;
+    --brand-5: 32 95% 50%;
     --glass-bg: 0 0% 100% / 0.6;
     --glass-border: 262 60% 60% / 0.18;
     --grid-line: 262 60% 50% / 0.08;
   }
-
-  /* Dark — midnight neon candy */
   .dark {
     --background: 262 60% 6%;
     --foreground: 270 40% 97%;
-    --card: 262 45% 9%;
-    --card-foreground: 270 40% 97%;
-    --popover: 262 45% 9%;
-    --popover-foreground: 270 40% 97%;
-    --primary: 328 100% 62%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 258 90% 66%;
-    --secondary-foreground: 0 0% 100%;
+    --surface: 262 45% 9%;
     --muted: 262 30% 16%;
     --muted-foreground: 262 18% 72%;
-    --accent: 188 86% 53%;
-    --accent-foreground: 262 60% 6%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
     --border: 262 30% 20%;
-    --input: 262 30% 20%;
-    --ring: 328 100% 62%;
-
-    --neon-pink: 328 100% 62%;
-    --neon-violet: 258 90% 66%;
-    --neon-cyan: 188 86% 53%;
-    --neon-lime: 82 85% 55%;
-    --neon-amber: 38 100% 60%;
-
+    --brand-1: 328 100% 62%;
+    --brand-2: 258 90% 66%;
+    --brand-3: 188 86% 53%;
+    --brand-4: 82 85% 55%;
+    --brand-5: 38 100% 60%;
     --glass-bg: 262 50% 14% / 0.45;
     --glass-border: 0 0% 100% / 0.09;
     --grid-line: 270 80% 80% / 0.06;
+  }
+
+  /* candy */
+  [data-palette="candy"] {
+    --background: 270 100% 98.5%;
+    --foreground: 260 45% 12%;
+    --surface: 0 0% 100%;
+    --muted: 268 60% 94%;
+    --muted-foreground: 260 14% 40%;
+    --border: 266 40% 86%;
+    --brand-1: 328 90% 52%;
+    --brand-2: 262 83% 58%;
+    --brand-3: 190 90% 40%;
+    --brand-4: 84 75% 38%;
+    --brand-5: 32 95% 50%;
+    --glass-bg: 0 0% 100% / 0.6;
+    --glass-border: 262 60% 60% / 0.18;
+    --grid-line: 262 60% 50% / 0.08;
+  }
+  .dark[data-palette="candy"],
+  .dark [data-palette="candy"] {
+    --background: 262 60% 6%;
+    --foreground: 270 40% 97%;
+    --surface: 262 45% 9%;
+    --muted: 262 30% 16%;
+    --muted-foreground: 262 18% 72%;
+    --border: 262 30% 20%;
+    --brand-1: 328 100% 62%;
+    --brand-2: 258 90% 66%;
+    --brand-3: 188 86% 53%;
+    --brand-4: 82 85% 55%;
+    --brand-5: 38 100% 60%;
+    --glass-bg: 262 50% 14% / 0.45;
+    --glass-border: 0 0% 100% / 0.09;
+    --grid-line: 270 80% 80% / 0.06;
+  }
+
+  /* aurora */
+  [data-palette="aurora"] {
+    --background: 150 60% 97%;
+    --foreground: 190 50% 10%;
+    --surface: 0 0% 100%;
+    --muted: 155 40% 92%;
+    --muted-foreground: 190 12% 38%;
+    --border: 160 30% 84%;
+    --brand-1: 160 84% 34%;
+    --brand-2: 199 89% 42%;
+    --brand-3: 262 70% 58%;
+    --brand-4: 85 70% 34%;
+    --brand-5: 174 80% 32%;
+    --glass-bg: 0 0% 100% / 0.6;
+    --glass-border: 170 60% 30% / 0.16;
+    --grid-line: 170 60% 30% / 0.08;
+  }
+  .dark[data-palette="aurora"],
+  .dark [data-palette="aurora"] {
+    --background: 195 55% 5%;
+    --foreground: 160 30% 96%;
+    --surface: 190 45% 8%;
+    --muted: 190 30% 14%;
+    --muted-foreground: 180 12% 70%;
+    --border: 185 30% 18%;
+    --brand-1: 158 85% 48%;
+    --brand-2: 199 95% 60%;
+    --brand-3: 262 90% 76%;
+    --brand-4: 84 85% 58%;
+    --brand-5: 174 85% 45%;
+    --glass-bg: 190 50% 12% / 0.45;
+    --glass-border: 0 0% 100% / 0.09;
+    --grid-line: 160 80% 70% / 0.06;
+  }
+
+  /* sunset */
+  [data-palette="sunset"] {
+    --background: 30 100% 97%;
+    --foreground: 345 45% 12%;
+    --surface: 0 0% 100%;
+    --muted: 25 80% 93%;
+    --muted-foreground: 345 12% 40%;
+    --border: 20 50% 86%;
+    --brand-1: 20 92% 48%;
+    --brand-2: 346 80% 50%;
+    --brand-3: 292 70% 48%;
+    --brand-4: 38 95% 42%;
+    --brand-5: 4 80% 50%;
+    --glass-bg: 0 0% 100% / 0.6;
+    --glass-border: 20 80% 40% / 0.16;
+    --grid-line: 20 80% 40% / 0.08;
+  }
+  .dark[data-palette="sunset"],
+  .dark [data-palette="sunset"] {
+    --background: 345 40% 6%;
+    --foreground: 30 60% 96%;
+    --surface: 345 35% 9%;
+    --muted: 345 25% 15%;
+    --muted-foreground: 20 15% 72%;
+    --border: 345 25% 20%;
+    --brand-1: 22 98% 58%;
+    --brand-2: 346 90% 62%;
+    --brand-3: 292 85% 66%;
+    --brand-4: 45 98% 58%;
+    --brand-5: 4 90% 60%;
+    --glass-bg: 345 40% 13% / 0.45;
+    --glass-border: 0 0% 100% / 0.09;
+    --grid-line: 20 90% 75% / 0.06;
+  }
+
+  /* ocean */
+  [data-palette="ocean"] {
+    --background: 210 100% 97.5%;
+    --foreground: 224 60% 12%;
+    --surface: 0 0% 100%;
+    --muted: 214 70% 93%;
+    --muted-foreground: 220 15% 40%;
+    --border: 214 50% 86%;
+    --brand-1: 221 83% 50%;
+    --brand-2: 239 70% 56%;
+    --brand-3: 190 90% 36%;
+    --brand-4: 168 70% 32%;
+    --brand-5: 199 89% 42%;
+    --glass-bg: 0 0% 100% / 0.6;
+    --glass-border: 220 80% 40% / 0.16;
+    --grid-line: 220 80% 40% / 0.08;
+  }
+  .dark[data-palette="ocean"],
+  .dark [data-palette="ocean"] {
+    --background: 224 60% 6%;
+    --foreground: 210 50% 97%;
+    --surface: 224 50% 9%;
+    --muted: 222 35% 16%;
+    --muted-foreground: 215 20% 72%;
+    --border: 222 35% 20%;
+    --brand-1: 217 95% 62%;
+    --brand-2: 239 84% 70%;
+    --brand-3: 189 94% 50%;
+    --brand-4: 168 76% 58%;
+    --brand-5: 199 95% 64%;
+    --glass-bg: 224 50% 13% / 0.45;
+    --glass-border: 0 0% 100% / 0.09;
+    --grid-line: 210 90% 75% / 0.06;
+  }
+
+  /* gold */
+  [data-palette="gold"] {
+    --background: 45 70% 97%;
+    --foreground: 250 35% 12%;
+    --surface: 0 0% 100%;
+    --muted: 45 50% 91%;
+    --muted-foreground: 250 10% 40%;
+    --border: 42 40% 84%;
+    --brand-1: 40 92% 40%;
+    --brand-2: 270 65% 50%;
+    --brand-3: 330 70% 50%;
+    --brand-4: 35 60% 45%;
+    --brand-5: 25 90% 48%;
+    --glass-bg: 0 0% 100% / 0.6;
+    --glass-border: 40 70% 35% / 0.18;
+    --grid-line: 40 70% 35% / 0.08;
+  }
+  .dark[data-palette="gold"],
+  .dark [data-palette="gold"] {
+    --background: 250 30% 5%;
+    --foreground: 45 50% 95%;
+    --surface: 250 25% 9%;
+    --muted: 250 18% 15%;
+    --muted-foreground: 45 12% 70%;
+    --border: 250 18% 20%;
+    --brand-1: 43 96% 58%;
+    --brand-2: 270 80% 66%;
+    --brand-3: 330 85% 70%;
+    --brand-4: 40 70% 80%;
+    --brand-5: 25 95% 60%;
+    --glass-bg: 250 25% 12% / 0.45;
+    --glass-border: 0 0% 100% / 0.09;
+    --grid-line: 45 90% 75% / 0.06;
   }
 
   * {
@@ -75,8 +243,22 @@
   }
 
   html {
-    scroll-behavior: smooth;
     scroll-padding-top: 6rem;
+  }
+
+  /* Lenis smooth scroll */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+  .lenis.lenis-stopped {
+    overflow: hidden;
   }
 
   body {
@@ -93,7 +275,7 @@
   }
 
   ::selection {
-    background: hsl(var(--neon-pink) / 0.35);
+    background: hsl(var(--brand-1) / 0.35);
   }
 
   /* Scrollbar */
@@ -106,7 +288,7 @@
   ::-webkit-scrollbar-thumb {
     border-radius: 999px;
     border: 2px solid hsl(var(--background));
-    background: linear-gradient(hsl(var(--neon-pink)), hsl(var(--neon-violet)), hsl(var(--neon-cyan)));
+    background: linear-gradient(hsl(var(--brand-1)), hsl(var(--brand-2)), hsl(var(--brand-3)));
   }
 }
 
@@ -121,10 +303,10 @@
   .text-gradient {
     background-image: linear-gradient(
       100deg,
-      hsl(var(--neon-pink)),
-      hsl(var(--neon-violet)) 35%,
-      hsl(var(--neon-cyan)) 65%,
-      hsl(var(--neon-pink))
+      hsl(var(--brand-1)),
+      hsl(var(--brand-2)) 35%,
+      hsl(var(--brand-3)) 65%,
+      hsl(var(--brand-1))
     );
     background-size: 250% 100%;
     -webkit-background-clip: text;
@@ -136,9 +318,9 @@
   .bg-candy {
     background-image: linear-gradient(
       110deg,
-      hsl(var(--neon-pink)),
-      hsl(var(--neon-violet)) 50%,
-      hsl(var(--neon-cyan))
+      hsl(var(--brand-1)),
+      hsl(var(--brand-2)) 50%,
+      hsl(var(--brand-3))
     );
     background-size: 200% 100%;
   }
@@ -156,11 +338,11 @@
     border-radius: inherit;
     background: conic-gradient(
       from var(--angle, 0deg),
-      hsl(var(--neon-pink)),
-      hsl(var(--neon-violet)),
-      hsl(var(--neon-cyan)),
-      hsl(var(--neon-lime)),
-      hsl(var(--neon-pink))
+      hsl(var(--brand-1)),
+      hsl(var(--brand-2)),
+      hsl(var(--brand-3)),
+      hsl(var(--brand-4)),
+      hsl(var(--brand-1))
     );
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
@@ -250,4 +432,22 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Circular reveal when switching theme (View Transitions API) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+/* Freeze CSS transitions while the new-theme snapshot is captured */
+html.theme-switching,
+html.theme-switching * {
+  transition: none !important;
 }

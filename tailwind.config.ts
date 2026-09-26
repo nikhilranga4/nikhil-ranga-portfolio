@@ -53,12 +53,12 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        neon: {
-          pink: "hsl(var(--neon-pink))",
-          violet: "hsl(var(--neon-violet))",
-          cyan: "hsl(var(--neon-cyan))",
-          lime: "hsl(var(--neon-lime))",
-          amber: "hsl(var(--neon-amber))",
+        brand: {
+          1: "hsl(var(--brand-1) / <alpha-value>)",
+          2: "hsl(var(--brand-2) / <alpha-value>)",
+          3: "hsl(var(--brand-3) / <alpha-value>)",
+          4: "hsl(var(--brand-4) / <alpha-value>)",
+          5: "hsl(var(--brand-5) / <alpha-value>)",
         },
       },
       fontFamily: {
@@ -73,10 +73,10 @@ export default {
         sm: "calc(var(--radius) - 8px)",
       },
       boxShadow: {
-        "glow-pink": "0 0 40px -8px hsl(var(--neon-pink) / 0.65)",
-        "glow-violet": "0 0 40px -8px hsl(var(--neon-violet) / 0.65)",
-        "glow-cyan": "0 0 40px -8px hsl(var(--neon-cyan) / 0.65)",
-        pop: "0 6px 0 0 hsl(var(--neon-violet) / 0.9)",
+        "glow-1": "0 0 40px -8px hsl(var(--brand-1) / 0.65)",
+        "glow-2": "0 0 40px -8px hsl(var(--brand-2) / 0.65)",
+        "glow-3": "0 0 40px -8px hsl(var(--brand-3) / 0.65)",
+        pop: "0 6px 0 0 hsl(var(--brand-2) / 0.9)",
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -93,6 +93,7 @@ export default {
         wiggle: "wiggle 0.6s ease-in-out",
         "pulse-ring": "pulse-ring 2s cubic-bezier(0.2, 0.6, 0.4, 1) infinite",
         "scroll-dot": "scroll-dot 1.8s ease-in-out infinite",
+        tumble: "tumble 18s linear infinite",
       },
       keyframes: {
         "accordion-down": {
@@ -144,6 +145,10 @@ export default {
         "pulse-ring": {
           "0%": { transform: "scale(0.8)", opacity: "0.8" },
           "100%": { transform: "scale(2.2)", opacity: "0" },
+        },
+        tumble: {
+          from: { transform: "rotateX(0deg) rotateY(0deg) rotateZ(0deg)" },
+          to: { transform: "rotateX(360deg) rotateY(720deg) rotateZ(180deg)" },
         },
         "scroll-dot": {
           "0%": { transform: "translateY(0)", opacity: "1" },
