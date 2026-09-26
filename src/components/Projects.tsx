@@ -1,9 +1,21 @@
-import React from "react";
-import HTMLFlipBook from "react-pageflip";
-import { Button } from "./ui/button";
-import { ExternalLink, Github } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowUpRight, Github } from "lucide-react";
+import SectionHeading from "@/components/SectionHeading";
+import { TiltCard } from "@/components/ui/tilt-card";
+import { cn } from "@/lib/utils";
 
-const projects = [
+interface Project {
+  title: string;
+  description: string;
+  image: string;
+  demo?: string;
+  github?: string;
+  date: string;
+  tags: string[];
+}
+
+const projects: Project[] = [
   {
     title: "Leaderboard points",
     description: "Leaderboard using ReactJS TypeScript and ViteJS.User can add members into the table and ask for points to each, so this code will produce random points for selected member randomly and based on points the members will be updated in the points table ",
@@ -26,7 +38,7 @@ const projects = [
     title: "Movie Review App",
     description: "React Native application that fetches movie details via API calls and displays them on movie cards. Combines frontend and backend development.",
     image: "/movie-review.png",
-    demo: "expo.dev/artifacts/eas/oaUDk2pEkgyVLK5vYFAaED.apk",
+    demo: "https://expo.dev/artifacts/eas/oaUDk2pEkgyVLK5vYFAaED.apk",
     github: "https://github.com/nikhilranga4/MovieApp",
     date: "Dec 2024",
     tags: ["React Native", "API Integration", "Mobile Development"]
@@ -103,74 +115,176 @@ const projects = [
   }
 ];
 
-const Page = React.forwardRef(({ project }, ref) => (
-  <div className="demoPage p-6 bg-white dark:bg-gray-800" ref={ref}>
-    <img
-      src={project.image}
-      alt={project.title}
-      className="w-full h-48 object-cover rounded-md mb-4"
-    />
-    <h3 className="text-xl font-bold mb-2">{project.title}</h3>
-    <span className="text-sm font-semibold text-green-500 mb-4">{project.date}</span>
-    <p className="text-muted-foreground mb-4">{project.description}</p>
+type Category = "all" | "web" | "mobile" | "ai";
 
-    <div className="flex flex-wrap gap-2 mb-4">
-      {project.tags.map((tag, i) => (
-        <span
-          key={i}
-          className="px-3 py-1 bg-gradient-to-r from-gray-400 to-gray-600 text-white rounded-full text-sm"
-        >
-          {tag}
-        </span>
-      ))}
-    </div>
+const FILTERS: { id: Category; label: string }[] = [
+  { id: "all", label: "✨ All" },
+  { id: "web", label: "🌐 Web" },
+  { id: "mobile", label: "📱 Mobile" },
+  { id: "ai", label: "🤖 AI/ML" },
+];
 
-    <div className="flex gap-4">
-      {project.demo && (
-        <Button variant="outline" size="sm" asChild>
-          <a href={project.demo} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Demo
-          </a>
-        </Button>
+const categoryOf = (project: Project): Exclude<Category, "all"> => {
+  if (project.tags.includes("AI/ML")) return "ai";
+  if (project.tags.includes("React Native")) return "mobile";
+  return "web";
+};
+
+const TAG_COLORS = [
+  "text-neon-pink border-neon-pink/30",
+  "text-neon-violet border-neon-violet/30",
+  "text-neon-cyan border-neon-cyan/30",
+  "text-neon-lime border-neon-lime/30",
+];
+
+const ProjectCard = ({ project, index, featured }: { project: Project; index: number; featured: boolean }) => (
+  <TiltCard max={featured ? 6 : 10}>
+    <article
+      className={cn(
+        "gradient-border relative flex h-full flex-col rounded-3xl p-3 preserve-3d",
+        featured && "lg:flex-row lg:gap-2"
       )}
-      <Button variant="outline" size="sm" asChild>
-        <a href={project.github} target="_blank" rel="noopener noreferrer">
-          <Github className="mr-2 h-4 w-4" />
-          Code
-        </a>
-      </Button>
-    </div>
-    <p className="text-black-500 font-extrabold mb-4 py-35 text-center">👋 Flip Cards to see all </p>
-  </div>
-));
+    >
+      <div className="glass absolute inset-0 rounded-3xl transition-shadow duration-500 group-hover:shadow-[0_30px_80px_-20px_hsl(var(--neon-pink)/0.45)]" />
+
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-2xl bg-muted [transform:translateZ(20px)]",
+          featured ? "aspect-[16/10] lg:aspect-auto lg:min-h-[360px] lg:w-[58%] lg:shrink-0" : "aspect-[16/10]"
+        )}
+      >
+        <img
+          src={project.image}
+          alt={project.title}
+          loading="lazy"
+          className={cn(
+            "h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110",
+            featured ? "object-left-top" : "object-top"
+          )}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        <span className="chip absolute left-3 top-3 border-white/20 bg-black/50 text-white backdrop-blur-md">
+          {project.date}
+        </span>
+        <span className="absolute bottom-2 right-3 font-display text-5xl font-extrabold text-white/25">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+      </div>
+
+      <div
+        className={cn(
+          "relative flex flex-1 flex-col px-3 pb-3 pt-5 [transform:translateZ(40px)]",
+          featured && "lg:justify-center lg:px-5"
+        )}
+      >
+        {featured && <span className="chip mb-3 w-fit text-neon-lime">★ Featured</span>}
+        <h3 className={cn("mb-2 font-display font-bold leading-tight", featured ? "text-2xl sm:text-3xl" : "text-xl")}>
+          {project.title}
+        </h3>
+        <p className={cn("mb-4 text-sm leading-relaxed text-muted-foreground", !featured && "line-clamp-3")}>
+          {project.description}
+        </p>
+
+        <div className="mb-5 flex flex-wrap gap-1.5">
+          {project.tags.map((tag, i) => (
+            <span key={tag} className={cn("chip", TAG_COLORS[i % TAG_COLORS.length])}>
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-auto flex gap-3">
+          {project.demo && (
+            <a
+              href={project.demo}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-candy inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-glow-pink transition-transform hover:-translate-y-0.5 hover:scale-105"
+            >
+              Live demo
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+          )}
+          {project.github && (
+            <a
+              href={project.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/60 px-5 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 hover:border-neon-violet hover:text-neon-violet"
+            >
+              <Github className="h-4 w-4" />
+              Code
+            </a>
+          )}
+        </div>
+      </div>
+    </article>
+  </TiltCard>
+);
 
 const Projects = () => {
+  const [filter, setFilter] = useState<Category>("all");
+  const visible = useMemo(
+    () => (filter === "all" ? projects : projects.filter((p) => categoryOf(p) === filter)),
+    [filter]
+  );
+
   return (
-    <section className="py-20 bg-background relative" id="projects">
+    <section className="relative py-24 sm:py-32" id="projects">
       <div className="container">
-        <h2 className="text-4xl font-bold text-center mb-12">Projects</h2>
-        <HTMLFlipBook
-          width={400}
-          height={600}
-          size="stretch"
-          minWidth={300}
-          maxWidth={500}
-          minHeight={400}
-          maxHeight={700}
-          drawShadow={true}
-          flippingTime={800}
-          usePortrait={true}
-          startZIndex={0}
-          autoSize={true}
-          showCover={true}
-          mobileScrollSupport={true}
-          className="mx-auto"
-        >
-          {projects.map((project, index) => (
-            <Page key={index} project={project} />
-          ))}
-        </HTMLFlipBook>
+        <SectionHeading
+          index="04"
+          eyebrow="projects"
+          title="Things I've Built"
+          subtitle="A playground of web apps, mobile apps and AI experiments. Hover a card to feel the depth."
+        />
+
+        <div className="mb-12 flex justify-center">
+          <div className="glass inline-flex flex-wrap justify-center gap-1 rounded-full p-1.5">
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFilter(f.id)}
+                className={cn(
+                  "relative isolate rounded-full px-4 py-2 text-sm font-semibold transition-colors sm:px-5",
+                  filter === f.id ? "text-white" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {filter === f.id && (
+                  <motion.span
+                    layoutId="project-filter"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    className="bg-candy absolute inset-0 -z-10 rounded-full shadow-glow-pink"
+                  />
+                )}
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <motion.div layout className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <AnimatePresence mode="popLayout">
+            {visible.map((project, i) => {
+              const featured = i === 0 && visible.length > 2;
+              return (
+                <motion.div
+                  key={project.title}
+                  layout
+                  initial={{ opacity: 0, scale: 0.8, rotateX: -30, y: 40 }}
+                  whileInView={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
+                  viewport={{ once: true, amount: 0.15 }}
+                  exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                  transition={{ type: "spring", stiffness: 120, damping: 16, delay: Math.min(i * 0.05, 0.4) }}
+                  className={cn(featured && "sm:col-span-2")}
+                >
+                  <ProjectCard project={project} index={projects.indexOf(project)} featured={featured} />
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
       </div>
     </section>
   );

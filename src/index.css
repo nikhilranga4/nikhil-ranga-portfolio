@@ -1,85 +1,253 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* Light — pastel lavender candy */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 270 100% 98.5%;
+    --foreground: 260 45% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 260 45% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --popover-foreground: 260 45% 12%;
+    --primary: 328 90% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 262 83% 58%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 268 60% 94%;
+    --muted-foreground: 260 14% 40%;
+    --accent: 190 90% 40%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 266 40% 86%;
+    --input: 266 40% 86%;
+    --ring: 328 90% 52%;
+    --radius: 1.25rem;
+
+    --neon-pink: 328 90% 52%;
+    --neon-violet: 262 83% 58%;
+    --neon-cyan: 190 90% 40%;
+    --neon-lime: 84 75% 38%;
+    --neon-amber: 32 95% 50%;
+
+    --glass-bg: 0 0% 100% / 0.6;
+    --glass-border: 262 60% 60% / 0.18;
+    --grid-line: 262 60% 50% / 0.08;
   }
 
+  /* Dark — midnight neon candy */
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --background: 262 60% 6%;
+    --foreground: 270 40% 97%;
+    --card: 262 45% 9%;
+    --card-foreground: 270 40% 97%;
+    --popover: 262 45% 9%;
+    --popover-foreground: 270 40% 97%;
+    --primary: 328 100% 62%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 258 90% 66%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 262 30% 16%;
+    --muted-foreground: 262 18% 72%;
+    --accent: 188 86% 53%;
+    --accent-foreground: 262 60% 6%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 262 30% 20%;
+    --input: 262 30% 20%;
+    --ring: 328 100% 62%;
+
+    --neon-pink: 328 100% 62%;
+    --neon-violet: 258 90% 66%;
+    --neon-cyan: 188 86% 53%;
+    --neon-lime: 82 85% 55%;
+    --neon-amber: 38 100% 60%;
+
+    --glass-bg: 262 50% 14% / 0.45;
+    --glass-border: 0 0% 100% / 0.09;
+    --grid-line: 270 80% 80% / 0.06;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
   }
 
   body {
-    @apply bg-background text-foreground transition-colors duration-300;
+    @apply bg-background font-sans text-foreground antialiased transition-colors duration-500;
     font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
   }
 
-  .dark body {
-    background: linear-gradient(to bottom right, #000000, #111111);
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
   }
 
-  .glass-card {
-    @apply backdrop-blur-lg bg-white/10 border border-white/20;
+  ::selection {
+    background: hsl(var(--neon-pink) / 0.35);
   }
 
-  .dark .glass-card {
-    @apply bg-black/40 border-white/10;
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    border: 2px solid hsl(var(--background));
+    background: linear-gradient(hsl(var(--neon-pink)), hsl(var(--neon-violet)), hsl(var(--neon-cyan)));
   }
 }
 
-.floating {
-  animation: floating 3s ease-in-out infinite;
+@layer components {
+  .glass {
+    background: hsl(var(--glass-bg));
+    border: 1px solid hsl(var(--glass-border));
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+  }
+
+  .text-gradient {
+    background-image: linear-gradient(
+      100deg,
+      hsl(var(--neon-pink)),
+      hsl(var(--neon-violet)) 35%,
+      hsl(var(--neon-cyan)) 65%,
+      hsl(var(--neon-pink))
+    );
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: gradient-x 6s ease infinite;
+  }
+
+  .bg-candy {
+    background-image: linear-gradient(
+      110deg,
+      hsl(var(--neon-pink)),
+      hsl(var(--neon-violet)) 50%,
+      hsl(var(--neon-cyan))
+    );
+    background-size: 200% 100%;
+  }
+
+  /* Animated conic gradient border — add to a relative, rounded element */
+  /* No `isolation` here: it would flatten 3D children inside tilt cards */
+  .gradient-border {
+    position: relative;
+  }
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1.5px;
+    border-radius: inherit;
+    background: conic-gradient(
+      from var(--angle, 0deg),
+      hsl(var(--neon-pink)),
+      hsl(var(--neon-violet)),
+      hsl(var(--neon-cyan)),
+      hsl(var(--neon-lime)),
+      hsl(var(--neon-pink))
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    animation: border-spin 4s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .gradient-border:hover::before,
+  .gradient-border.is-active::before {
+    opacity: 1;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[0.72rem] font-medium;
+    background: hsl(var(--glass-bg));
+    border: 1px solid hsl(var(--glass-border));
+  }
+
+  .noise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--grid-line)) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--grid-line)) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
 }
 
-@keyframes floating {
-  0% { transform: translate(0, 0px); }
-  50% { transform: translate(0, 15px); }
-  100% { transform: translate(0, -0px); }
+@layer utilities {
+  .perspective {
+    perspective: 1200px;
+  }
+  .perspective-near {
+    perspective: 600px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
 }
 
-.spinner {
-  border-color: rgba(255, 255, 255, 0.2);
-  border-top-color: #969697;
-  /* Primary color for dark mode */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-spin {
+  to {
+    --angle: 360deg;
+  }
+}
+
+@keyframes gradient-x {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Hide the native cursor only when our custom cursor is mounted */
+@media (pointer: fine) {
+  html.has-custom-cursor,
+  html.has-custom-cursor * {
+    cursor: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

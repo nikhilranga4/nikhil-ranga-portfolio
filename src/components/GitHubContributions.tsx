@@ -1,82 +1,83 @@
-import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { Github } from "lucide-react";
+import { ArrowUpRight, Github } from "lucide-react";
+import SectionHeading from "@/components/SectionHeading";
+import { TiltCard } from "@/components/ui/tilt-card";
 
 const GitHubContributions = () => {
   return (
-    <section className="py-20 relative z-10" id="github">
-      <div className="container mx-auto px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-12"
-        >
-          <h2 className="text-3xl md:text-4xl font-bold font-heading mb-4 text-gray-900 dark:text-white">
-            GitHub Contributions
-          </h2>
-          <p className="text-muted-foreground dark:text-gray-400">
-            My open source journey and activity
-          </p>
-        </motion.div>
+    <section className="relative py-24 sm:py-32" id="github">
+      <div className="container">
+        <SectionHeading
+          index="05"
+          eyebrow="open source"
+          title="GitHub Contributions"
+          subtitle="My open source journey and activity"
+        />
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="space-y-8"
+          initial={{ opacity: 0, y: 60, rotateX: 25 }}
+          whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ type: "spring", stiffness: 70, damping: 16 }}
+          className="perspective mx-auto max-w-5xl"
         >
-          <Card className="p-6 dark:bg-black/40 dark:backdrop-blur-sm dark:border-white/10">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Github className="w-6 h-6 text-gray-900 dark:text-white" />
+          <div className="gradient-border is-active relative rounded-[2rem] p-5 sm:p-8">
+            <div className="glass absolute inset-0 rounded-[2rem]" />
+
+            <div className="relative">
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
                 <a
                   href="https://github.com/nikhilranga4"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-lg font-semibold hover:text-primary transition-colors text-gray-900 dark:text-white"
+                  className="group flex items-center gap-3"
                 >
-                  @nikhilranga4
+                  <span className="bg-candy flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-glow-pink transition-transform group-hover:rotate-12">
+                    <Github className="h-6 w-6" />
+                  </span>
+                  <span className="font-display text-xl font-bold transition-colors group-hover:text-neon-pink">
+                    @nikhilranga4
+                  </span>
+                </a>
+                <a
+                  href="https://github.com/nikhilranga4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="chip px-4 py-2 text-sm text-foreground transition-colors hover:border-neon-pink hover:text-neon-pink"
+                >
+                  Follow on GitHub <ArrowUpRight className="h-4 w-4" />
                 </a>
               </div>
-            </div>
 
-            <div className="space-y-6">
-              {/* GitHub Contribution Calendar */}
-              <div className="w-full overflow-hidden rounded-lg">
-                <motion.img
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                  src={`https://ghchart.rshah.org/1a237e/nikhilranga4`}
+              <div className="mb-6 overflow-x-auto rounded-2xl bg-white p-4 shadow-inner">
+                <img
+                  src="https://ghchart.rshah.org/ff3ea5/nikhilranga4"
                   alt="GitHub Contribution Calendar"
-                  className="w-full h-auto rounded-lg bg-white/5 p-4"
+                  loading="lazy"
+                  className="h-auto w-full min-w-[640px]"
                 />
               </div>
 
-              {/* GitHub Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-black">
-                <motion.img
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  src="https://github-readme-stats-sigma-five.vercel.app/api?username=nikhilranga4&show_icons=true&theme=dark&hide_border=true&count_private=true"
-                  alt="GitHub Stats"
-                  className="w-full h-auto rounded-lg"
-                />
-                <motion.img
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                  src="https://github-readme-streak-stats.herokuapp.com/?user=nikhilranga4&theme=dark&hide_border=true&background=00000000"
-                  alt="GitHub Streak Stats"
-                  className="w-full h-auto rounded-lg bg-black"
-                />
+              <div className="grid gap-5 md:grid-cols-2">
+                <TiltCard max={8}>
+                  <img
+                    src="https://github-readme-stats-sigma-five.vercel.app/api?username=nikhilranga4&show_icons=true&theme=radical&hide_border=true&count_private=true&border_radius=20"
+                    alt="GitHub Stats"
+                    loading="lazy"
+                    className="h-auto w-full rounded-2xl shadow-glow-violet"
+                  />
+                </TiltCard>
+                <TiltCard max={8}>
+                  <img
+                    src="https://github-readme-streak-stats.herokuapp.com/?user=nikhilranga4&theme=radical&hide_border=true&border_radius=20"
+                    alt="GitHub Streak Stats"
+                    loading="lazy"
+                    className="h-auto w-full rounded-2xl shadow-glow-pink"
+                  />
+                </TiltCard>
               </div>
             </div>
-          </Card>
+          </div>
         </motion.div>
       </div>
     </section>
