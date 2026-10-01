@@ -1,8 +1,9 @@
 import { useRef, useState } from "react";
 import { motion, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
-import { Briefcase, Code2, Cpu, GraduationCap, Globe, RotateCw, Smartphone, Users } from "lucide-react";
+import { Briefcase, Code2, GraduationCap, RotateCw, Users } from "lucide-react";
 import SectionHeading from "@/components/SectionHeading";
 import WhoAmIChat from "@/components/about/WhoAmIChat";
+import WhatIDo from "@/components/about/WhatIDo";
 import { ScrollReveal3D } from "@/components/ui/scroll-reveal";
 import { TiltCard } from "@/components/ui/tilt-card";
 import { cn } from "@/lib/utils";
@@ -15,26 +16,6 @@ const FACTS = [
   { icon: Code2, label: "Toolkit", value: "React · React Native · Node.js · Python" },
 ];
 
-const SERVICES = [
-  {
-    icon: Globe,
-    title: "Web Apps",
-    desc: "Fast, responsive front-ends and full-stack web apps.",
-    tags: ["React", "TypeScript", "Next.js"],
-  },
-  {
-    icon: Smartphone,
-    title: "Mobile Apps",
-    desc: "Cross-platform apps with smooth animations.",
-    tags: ["React Native", "Expo"],
-  },
-  {
-    icon: Cpu,
-    title: "Backend & AI",
-    desc: "APIs, databases and machine-learning experiments.",
-    tags: ["Node.js", "Django", "Python"],
-  },
-];
 
 // Deterministic "barcode" stripes for the ID card
 const BARCODE = [3, 1, 2, 1, 3, 2, 1, 1, 3, 1, 2, 2, 1, 3, 1, 2, 1, 1, 2, 3, 1, 2, 1, 3, 2, 1];
@@ -172,35 +153,10 @@ const About = () => {
 
           <div>
             <WhoAmIChat />
-
-            <p className="mb-4 mt-12 font-mono text-xs uppercase tracking-[0.25em] text-brand-1">// what I do</p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {SERVICES.map(({ icon: Icon, title, desc, tags }, i) => (
-                <ScrollReveal3D key={title} direction={i === 0 ? -1 : i === 2 ? 1 : 0} tilt={40} className="h-full">
-                  <TiltCard max={10}>
-                    <div className="gradient-border relative h-full rounded-3xl p-5 preserve-3d">
-                      <div className="glass absolute inset-0 rounded-3xl" />
-                      <div className="relative flex h-full flex-col [transform:translateZ(28px)]">
-                        <span className="bg-candy mb-4 flex h-11 w-11 items-center justify-center rounded-xl text-on-grad shadow-glow-1">
-                          <Icon className="h-5 w-5" />
-                        </span>
-                        <h3 className="font-display text-lg font-bold">{title}</h3>
-                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{desc}</p>
-                        <div className="mt-auto flex flex-wrap gap-1.5 pt-4">
-                          {tags.map((t) => (
-                            <span key={t} className="chip text-[0.65rem] text-brand-3">
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </TiltCard>
-                </ScrollReveal3D>
-              ))}
-            </div>
           </div>
         </div>
+
+        <WhatIDo />
       </div>
     </section>
   );

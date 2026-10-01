@@ -70,43 +70,83 @@ function useIstTime() {
   return { time, part };
 }
 
-/** Big wordmark that scales to fill the container width in whichever theme font is active. */
-const Wordmark = ({ text }: { text: string }) => {
-  const box = useRef<HTMLDivElement>(null);
-  const probe = useRef<HTMLSpanElement>(null);
-  const [size, setSize] = useState<number | null>(null);
+/**
+ * One line of the wordmark drawn as SVG text. The viewBox is set to the text's own bounding box,
+ * so it scales to exactly the available width in any font, and the gradient fill is a real SVG
+ * gradient (reliable on every browser, unlike background-clip text on some mobile Safari builds).
+ */
+const WordmarkLine = ({ text, id }: { text: string; id: string }) => {
+  const textRef = useRef<SVGTextElement>(null);
+  const [box, setBox] = useState("0 0 1000 160");
+
   useEffect(() => {
     const fit = () => {
-      if (!box.current || !probe.current?.offsetWidth) return;
-      setSize((box.current.clientWidth * 100) / probe.current.offsetWidth);
+      const el = textRef.current;
+      if (!el) return;
+      try {
+        const b = el.getBBox();
+        if (b.width) setBox(`${b.x} ${b.y} ${b.width} ${b.height}`);
+      } catch {
+        // getBBox can throw while the SVG isn't rendered yet; the default viewBox still shows the text
+      }
     };
     fit();
-    window.addEventListener("resize", fit);
     document.fonts?.ready.then(fit).catch(() => undefined);
+    document.fonts?.addEventListener("loadingdone", fit);
     const mo = new MutationObserver(() => requestAnimationFrame(fit));
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-palette"] });
     return () => {
-      window.removeEventListener("resize", fit);
+      document.fonts?.removeEventListener("loadingdone", fit);
       mo.disconnect();
     };
-  }, []);
-  const cls = "whitespace-nowrap font-display font-extrabold uppercase leading-[0.85] tracking-tight";
+  }, [text]);
+
   return (
-    <div ref={box} aria-hidden className="relative select-none overflow-hidden">
-      <span ref={probe} className={cn(cls, "invisible absolute")} style={{ fontSize: 100 }}>
-        {text}
-      </span>
-      <motion.p
-        initial={{ y: "40%", opacity: 0 }}
-        whileInView={{ y: 0, opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ type: "spring", stiffness: 70, damping: 16 }}
-        className={cn(cls, "text-gradient pb-[0.08em]")}
-        style={{ fontSize: size ?? "12vw" }}
+    <svg viewBox={box} className="block h-auto w-full overflow-visible" role="presentation">
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" style={{ stopColor: "hsl(var(--brand-1))" }} />
+          <stop offset="50%" style={{ stopColor: "hsl(var(--brand-3))" }} />
+          <stop offset="100%" style={{ stopColor: "hsl(var(--brand-2))" }} />
+        </linearGradient>
+      </defs>
+      <text
+        ref={textRef}
+        x="0"
+        y="120"
+        fill={`url(#${id})`}
+        stroke="hsl(var(--foreground) / 0.12)"
+        strokeWidth="1"
+        className="font-display font-extrabold uppercase"
+        style={{ fontSize: 140, fontVariationSettings: "var(--display-variation, normal)" }}
       >
         {text}
-      </motion.p>
-    </div>
+      </text>
+    </svg>
+  );
+};
+
+/** Giant footer wordmark: one line on wider screens, two stacked lines on phones. */
+const Wordmark = ({ text }: { text: string }) => {
+  const [first, ...rest] = text.split(" ");
+  return (
+    <motion.div
+      aria-label={text}
+      role="img"
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ type: "spring", stiffness: 70, damping: 16 }}
+      className="select-none"
+    >
+      <div className="hidden sm:block">
+        <WordmarkLine text={text} id="wordmark-full" />
+      </div>
+      <div className="flex flex-col gap-2 sm:hidden">
+        <WordmarkLine text={first} id="wordmark-first" />
+        <WordmarkLine text={rest.join(" ")} id="wordmark-rest" />
+      </div>
+    </motion.div>
   );
 };
 
