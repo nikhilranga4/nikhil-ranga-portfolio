@@ -65,11 +65,11 @@ const Navbar = () => {
           )}
         >
           <a href="#home" className="group flex items-center gap-2" aria-label="Back to top">
-            <span className="bg-candy flex h-9 w-9 items-center justify-center rounded-full font-display text-sm font-extrabold text-white shadow-glow-1 transition-transform duration-300 group-hover:rotate-[20deg] group-hover:scale-110">
+            <span className="bg-candy flex h-9 w-9 items-center justify-center rounded-full font-display text-sm font-extrabold text-on-grad shadow-glow-1 transition-transform duration-300 group-hover:rotate-[20deg] group-hover:scale-110">
               NR
             </span>
-            <span className={cn("font-display text-lg font-bold transition-colors duration-500", menuOpen && "text-white")}>
-              nikhil<span className={menuOpen ? "text-white/70" : "text-brand-1"}>.</span>dev
+            <span className={cn("font-display text-lg font-bold transition-colors duration-500", menuOpen && "text-on-grad")}>
+              nikhil<span className={menuOpen ? "text-on-grad/70" : "text-brand-1"}>.</span>dev
             </span>
           </a>
 
@@ -80,7 +80,7 @@ const Navbar = () => {
                   href={`#${item.id}`}
                   className={cn(
                     "group/nav relative isolate block rounded-full px-3.5 py-2 text-sm font-medium transition-colors lg:px-4",
-                    active === item.id ? "text-white" : "text-muted-foreground hover:text-foreground"
+                    active === item.id ? "text-on-grad" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {active === item.id && (

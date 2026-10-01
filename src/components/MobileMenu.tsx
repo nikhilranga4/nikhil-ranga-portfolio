@@ -26,7 +26,7 @@ interface MobileMenuProps {
 }
 
 const SectionLabel = ({ children }: { children: string }) => (
-  <p className="mb-3 font-mono text-[0.68rem] font-medium uppercase tracking-[0.25em] text-white/65">{children}</p>
+  <p className="mb-3 font-mono text-[0.68rem] font-medium uppercase tracking-[0.25em] text-on-grad/65">{children}</p>
 );
 
 /**
@@ -78,7 +78,7 @@ const MobileMenu = ({ open, onClose, active, origin }: MobileMenuProps) => {
           animate={{ clipPath: `circle(150vmax at ${at})` }}
           exit={{ clipPath: `circle(0px at ${at})`, transition: { duration: 0.45, ease: EASE, delay: 0.1 } }}
           transition={{ duration: 0.7, ease: EASE }}
-          className="fixed inset-0 z-40 overflow-y-auto overscroll-contain text-white lg:hidden"
+          className="fixed inset-0 z-40 overflow-y-auto overscroll-contain text-on-grad lg:hidden"
         >
           {/* Backdrop: animated palette gradient with soft light and grain */}
           <div aria-hidden className="bg-candy fixed inset-0 animate-gradient-x" />
@@ -134,7 +134,7 @@ const MobileMenu = ({ open, onClose, active, origin }: MobileMenuProps) => {
                         <span
                           className={cn(
                             "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105",
-                            isActive ? "bg-candy text-white shadow-glow-1" : "bg-white/15 ring-1 ring-white/20"
+                            isActive ? "bg-candy text-on-grad shadow-glow-1" : "bg-white/15 ring-1 ring-white/20"
                           )}
                         >
                           <Icon className="h-5 w-5" />
@@ -148,17 +148,17 @@ const MobileMenu = ({ open, onClose, active, origin }: MobileMenuProps) => {
                               </span>
                             )}
                           </span>
-                          <span className={cn("block truncate text-sm", isActive ? "text-slate-500" : "text-white/70")}>
+                          <span className={cn("block truncate text-sm", isActive ? "text-slate-500" : "text-on-grad/70")}>
                             {navItem.hint}
                           </span>
                         </span>
-                        <span className={cn("font-mono text-[0.7rem]", isActive ? "text-slate-400" : "text-white/50")}>
+                        <span className={cn("font-mono text-[0.7rem]", isActive ? "text-slate-400" : "text-on-grad/50")}>
                           0{i + 1}
                         </span>
                         <ChevronRight
                           className={cn(
                             "h-4 w-4 shrink-0 transition-transform duration-300 group-hover:translate-x-0.5",
-                            isActive ? "text-brand-1" : "text-white/60"
+                            isActive ? "text-brand-1" : "text-on-grad/60"
                           )}
                         />
                       </motion.a>
@@ -178,9 +178,9 @@ const MobileMenu = ({ open, onClose, active, origin }: MobileMenuProps) => {
               <div className="rounded-3xl border border-white/20 bg-white/10 p-4 backdrop-blur-md">
                 <div className="mb-3 flex items-center justify-between">
                   <SectionLabel>Appearance</SectionLabel>
-                  <span className="-mt-3 text-xs font-medium text-white/80">{paletteName}</span>
+                  <span className="-mt-3 text-xs font-medium text-on-grad/80">{paletteName}</span>
                 </div>
-                <div className="mb-4 flex justify-between">
+                <div className="mb-4 flex justify-around">
                   {PALETTES.map((p) => (
                     <motion.button
                       key={p.id}
@@ -207,7 +207,7 @@ const MobileMenu = ({ open, onClose, active, origin }: MobileMenuProps) => {
                       aria-pressed={resolvedMode === mode}
                       className={cn(
                         "flex items-center justify-center gap-2 rounded-full py-2 text-sm font-semibold capitalize transition-colors",
-                        resolvedMode === mode ? "bg-white text-brand-2 shadow" : "text-white/80 hover:text-white"
+                        resolvedMode === mode ? "bg-white text-brand-2 shadow" : "text-on-grad/80 hover:text-on-grad"
                       )}
                     >
                       {mode === "light" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -236,7 +236,7 @@ const MobileMenu = ({ open, onClose, active, origin }: MobileMenuProps) => {
                 </div>
               </div>
 
-              <p className="text-center text-xs text-white/60">© {new Date().getFullYear()} Nikhil Ranga · Built with React &amp; Three.js</p>
+              <p className="text-center text-xs text-on-grad/60">© {new Date().getFullYear()} Nikhil Ranga · Built with React &amp; Three.js</p>
             </motion.div>
           </div>
         </motion.div>

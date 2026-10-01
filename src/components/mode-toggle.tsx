@@ -16,7 +16,7 @@ export function ModeToggle() {
       <motion.span
         layout
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        className="bg-candy flex h-8 w-8 items-center justify-center rounded-full text-white shadow-glow-1"
+        className="bg-candy flex h-8 w-8 items-center justify-center rounded-full text-on-grad shadow-glow-1"
         style={{ marginLeft: isDark ? "auto" : 0 }}
       >
         <motion.span

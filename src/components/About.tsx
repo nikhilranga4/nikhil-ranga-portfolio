@@ -90,10 +90,10 @@ const IdCard = ({ sway }: { sway: MotionValue<number> }) => {
                 <div className="bg-candy relative h-28 animate-gradient-x">
                   <div className="noise absolute inset-0 opacity-20 mix-blend-overlay" />
                   <div className="absolute left-1/2 top-3 h-2 w-14 -translate-x-1/2 rounded-full bg-background/60" />
-                  <p className="absolute left-5 top-8 font-mono text-[0.65rem] font-bold uppercase tracking-[0.25em] text-white/85">
+                  <p className="absolute left-5 top-8 font-mono text-[0.65rem] font-bold uppercase tracking-[0.25em] text-on-grad/85">
                     Developer ID
                   </p>
-                  <p className="absolute right-5 top-8 font-mono text-[0.65rem] font-bold text-white/85">
+                  <p className="absolute right-5 top-8 font-mono text-[0.65rem] font-bold text-on-grad/85">
                     #{new Date().getFullYear()}
                   </p>
                 </div>
@@ -101,7 +101,7 @@ const IdCard = ({ sway }: { sway: MotionValue<number> }) => {
                 <div className="relative -mt-12 flex flex-col items-center px-6 text-center">
                   <div className="relative">
                     <span className="absolute inset-0 animate-pulse-ring rounded-full bg-brand-1/40" />
-                    <div className="bg-candy relative flex h-24 w-24 items-center justify-center rounded-full font-display text-3xl font-extrabold text-white shadow-glow-1 ring-4 ring-background">
+                    <div className="bg-candy relative flex h-24 w-24 items-center justify-center rounded-full font-display text-3xl font-extrabold text-on-grad shadow-glow-1 ring-4 ring-background">
                       NR
                     </div>
                   </div>
@@ -143,7 +143,7 @@ const IdCard = ({ sway }: { sway: MotionValue<number> }) => {
                   <ul className="mt-5 flex flex-col gap-4">
                     {FACTS.map(({ icon: Icon, label, value }) => (
                       <li key={label} className="flex items-start gap-3">
-                        <span className="bg-candy flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-glow-1">
+                        <span className="bg-candy flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-on-grad shadow-glow-1">
                           <Icon className="h-5 w-5" />
                         </span>
                         <span>
@@ -213,7 +213,7 @@ const About = () => {
                     <div className="gradient-border relative h-full rounded-3xl p-5 preserve-3d">
                       <div className="glass absolute inset-0 rounded-3xl" />
                       <div className="relative flex h-full flex-col [transform:translateZ(28px)]">
-                        <span className="bg-candy mb-4 flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-glow-1">
+                        <span className="bg-candy mb-4 flex h-11 w-11 items-center justify-center rounded-xl text-on-grad shadow-glow-1">
                           <Icon className="h-5 w-5" />
                         </span>
                         <h3 className="font-display text-lg font-bold">{title}</h3>

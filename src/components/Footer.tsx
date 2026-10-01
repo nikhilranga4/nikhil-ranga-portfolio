@@ -78,7 +78,7 @@ const Footer = () => {
   return (
     <footer id="contact" className="relative mt-12 overflow-hidden">
       {/* Ticker */}
-      <div className="bg-candy -rotate-2 scale-105 py-3 text-white shadow-glow-1">
+      <div className="bg-candy -rotate-2 scale-105 py-3 text-on-grad shadow-glow-1">
         <Marquee className="[--duration:25s] [--gap:2rem]" repeat={4}>
           {TICKER.map((t) => (
             <span
@@ -127,7 +127,7 @@ const Footer = () => {
                   href={`mailto:${EMAIL}`}
                   whileHover={{ scale: 1.04, rotate: -1 }}
                   whileTap={{ scale: 0.95 }}
-                  className="bg-candy group flex w-full animate-gradient-x items-center justify-center gap-3 rounded-2xl px-8 py-4 font-display text-lg font-bold text-white shadow-glow-1 sm:w-auto sm:rounded-full"
+                  className="bg-candy group flex w-full animate-gradient-x items-center justify-center gap-3 rounded-2xl px-8 py-4 font-display text-lg font-bold text-on-grad shadow-glow-1 sm:w-auto sm:rounded-full"
                 >
                   <Send className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:-rotate-12" />
                   Say hello
@@ -158,7 +158,7 @@ const Footer = () => {
                       className="group flex items-center gap-4 rounded-2xl px-3 py-3.5 transition-colors hover:bg-muted/50 sm:px-4 sm:py-4"
                     >
                       <span
-                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 ${tint}`}
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-on-grad transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 ${tint}`}
                       >
                         <Icon className="h-5 w-5" />
                       </span>
@@ -181,7 +181,7 @@ const Footer = () => {
       <div className="border-t border-border/60 bg-background/40 backdrop-blur-sm">
         <div className="container grid gap-6 py-8 text-sm text-muted-foreground md:grid-cols-[auto_1fr_auto] md:items-center">
           <div className="flex items-center justify-center gap-3 md:justify-start">
-            <span className="bg-candy flex h-9 w-9 items-center justify-center rounded-full font-display text-xs font-extrabold text-white">
+            <span className="bg-candy flex h-9 w-9 items-center justify-center rounded-full font-display text-xs font-extrabold text-on-grad">
               NR
             </span>
             <span className="font-display text-base font-bold text-foreground">

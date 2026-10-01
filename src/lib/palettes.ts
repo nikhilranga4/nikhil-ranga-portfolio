@@ -4,16 +4,14 @@
  * resolved values back as hex for places CSS can't reach (WebGL materials, image URLs).
  */
 export const PALETTES = [
-  { id: "candy", name: "Neon Candy", emoji: "🍬" },
-  { id: "aurora", name: "Cyber Aurora", emoji: "🌌" },
-  { id: "sunset", name: "Sunset Pop", emoji: "🌅" },
-  { id: "ocean", name: "Ocean Depths", emoji: "🌊" },
-  { id: "gold", name: "Midnight Gold", emoji: "👑" },
+  { id: "glacier", name: "Glacier Chrome", emoji: "❄️", fonts: "Unbounded · Manrope" },
+  { id: "lagoon", name: "Lagoon & Coral", emoji: "🏝️", fonts: "Fredoka · Nunito" },
+  { id: "ink", name: "Ink & Ultramarine", emoji: "🖋️", fonts: "Fraunces · Plus Jakarta" },
 ] as const;
 
 export type PaletteId = (typeof PALETTES)[number]["id"];
 
-export const DEFAULT_PALETTE: PaletteId = "ocean";
+export const DEFAULT_PALETTE: PaletteId = "glacier";
 
 export const isPaletteId = (value: unknown): value is PaletteId =>
   PALETTES.some((p) => p.id === value);
@@ -29,13 +27,13 @@ export interface PaletteColors {
 }
 
 export const FALLBACK_COLORS: PaletteColors = {
-  c1: "#4289fa",
-  c2: "#7274f3",
-  c3: "#08d3f7",
-  c4: "#43e5c5",
-  c5: "#4cc3fa",
-  background: "#060b18",
-  foreground: "#f4f7fb",
+  c1: "#4aa8ff",
+  c2: "#7d8fff",
+  c3: "#8ff0ff",
+  c4: "#5eead4",
+  c5: "#bfe6ff",
+  background: "#050d1c",
+  foreground: "#eaf5ff",
 };
 
 function hslToHex(h: number, s: number, l: number) {

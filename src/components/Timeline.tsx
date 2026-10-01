@@ -57,7 +57,7 @@ const Timeline = ({ items }: { items: TimelineItem[] }) => {
                 <span className={cn("absolute inset-0 animate-pulse-ring rounded-2xl opacity-60", accent.ring)} />
                 <span
                   className={cn(
-                    "relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-white md:h-14 md:w-14",
+                    "relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-on-grad md:h-14 md:w-14",
                     accent.orb,
                     accent.glow
                   )}

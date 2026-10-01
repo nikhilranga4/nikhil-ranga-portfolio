@@ -30,9 +30,9 @@ const ThemePicker = () => {
         <p className="mb-1 font-display text-lg font-bold">
           Pick a <span className="text-gradient">vibe</span>
         </p>
-        <p className="mb-4 font-mono text-[0.7rem] text-muted-foreground">// the whole site recolours, 3D included</p>
+        <p className="mb-4 font-mono text-[0.7rem] text-muted-foreground">// colours, gradients &amp; fonts all change</p>
 
-        <div className="mb-5 grid grid-cols-5 gap-2">
+        <div className="mb-5 grid grid-cols-3 gap-2">
           {PALETTES.map((p, i) => {
             const active = palette === p.id;
             return (
@@ -66,13 +66,19 @@ const ThemePicker = () => {
                     </motion.span>
                   )}
                 </span>
-                <span className="text-lg leading-none">{p.emoji}</span>
+                {/* The theme's name, set in its own display font */}
+                <span data-palette={p.id} className="font-display text-[0.8rem] font-bold leading-tight text-foreground">
+                  {p.name.split(" ")[0]}
+                </span>
               </motion.button>
             );
           })}
         </div>
-        <p className="-mt-2 mb-5 text-center font-display text-sm font-semibold">
-          {PALETTES.find((p) => p.id === palette)?.name}
+        <p className="-mt-2 mb-5 text-center text-sm">
+          <span className="font-display font-semibold">{PALETTES.find((p) => p.id === palette)?.name}</span>
+          <span className="block font-mono text-[0.65rem] text-muted-foreground">
+            {PALETTES.find((p) => p.id === palette)?.fonts}
+          </span>
         </p>
 
         <div className="mb-4 grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
@@ -83,7 +89,7 @@ const ThemePicker = () => {
               onClick={(e) => setTheme(mode, { x: e.clientX, y: e.clientY })}
               className={cn(
                 "relative isolate flex items-center justify-center gap-1.5 rounded-full py-2 text-sm font-semibold capitalize transition-colors",
-                resolvedMode === mode ? "text-white" : "text-muted-foreground hover:text-foreground"
+                resolvedMode === mode ? "text-on-grad" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {resolvedMode === mode && (

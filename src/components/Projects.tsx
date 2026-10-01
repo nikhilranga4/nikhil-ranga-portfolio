@@ -206,7 +206,7 @@ const ProjectCard = ({ project, index, featured }: { project: Project; index: nu
                 href={project.demo}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-candy group/demo inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-semibold sm:px-5 text-white shadow-glow-1 transition-transform hover:scale-105"
+                className="bg-candy group/demo inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-semibold sm:px-5 text-on-grad shadow-glow-1 transition-transform hover:scale-105"
               >
                 Live demo
                 <ArrowUpRight className="h-4 w-4 transition-transform group-hover/demo:-translate-y-0.5 group-hover/demo:translate-x-0.5" />
@@ -309,7 +309,7 @@ const ProjectCarousel = ({ items }: { items: Project[] }) => {
             aria-label="Next project"
             onClick={() => go(Math.min(items.length - 1, active + 1))}
             disabled={active === items.length - 1}
-            className="bg-candy flex h-10 w-10 items-center justify-center rounded-full text-white shadow-glow-1 transition-opacity disabled:opacity-40"
+            className="bg-candy flex h-10 w-10 items-center justify-center rounded-full text-on-grad shadow-glow-1 transition-opacity disabled:opacity-40"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
@@ -350,7 +350,7 @@ const Projects = () => {
                 onClick={() => setFilter(f.id)}
                 className={cn(
                   "relative isolate shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold transition-colors sm:px-5",
-                  filter === f.id ? "text-white" : "text-muted-foreground hover:text-foreground",
+                  filter === f.id ? "text-on-grad" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {filter === f.id && (

@@ -53,6 +53,7 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        "on-grad": "hsl(var(--on-grad) / <alpha-value>)",
         brand: {
           1: "hsl(var(--brand-1) / <alpha-value>)",
           2: "hsl(var(--brand-2) / <alpha-value>)",
@@ -62,10 +63,11 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["Outfit", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["'Bricolage Grotesque'", "Outfit", "sans-serif"],
-        heading: ["'Bricolage Grotesque'", "Outfit", "sans-serif"],
-        mono: ["'JetBrains Mono'", "ui-monospace", "monospace"],
+        // Each colour theme brings its own font pairing via CSS variables (see index.css)
+        sans: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-body)", "sans-serif"],
+        heading: ["var(--font-display)", "var(--font-body)", "sans-serif"],
+        mono: ["'JetBrains Mono Variable'", "'JetBrains Mono'", "ui-monospace", "monospace"],
       },
       borderRadius: {
         lg: "var(--radius)",

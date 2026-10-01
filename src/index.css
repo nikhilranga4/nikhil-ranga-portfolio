@@ -15,9 +15,9 @@
     --popover: var(--surface);
     --popover-foreground: var(--foreground);
     --primary: var(--brand-1);
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: var(--on-grad);
     --secondary: var(--brand-2);
-    --secondary-foreground: 0 0% 100%;
+    --secondary-foreground: var(--on-grad);
     --accent: var(--brand-3);
     --accent-foreground: var(--background);
     --destructive: 0 84% 60%;
@@ -30,213 +30,187 @@
     --radius: 1.25rem;
   }
 
-  /* Fallback (no data-palette yet): Ocean Depths, the default theme */
+  /* Fallback (no data-palette yet): Glacier Chrome, the default theme */
   :root {
-    --background: 210 100% 97.5%;
-    --foreground: 224 60% 12%;
+    --font-display: 'Unbounded Variable';
+    --font-body: 'Manrope Variable';
+    --display-scale: 0.72;
+    --display-variation: normal;
+    --display-tracking: -0.04em;
+    --background: 213 73% 97.1%;
+    --foreground: 215 70% 9.2%;
     --surface: 0 0% 100%;
-    --muted: 214 70% 93%;
-    --muted-foreground: 220 15% 40%;
-    --border: 214 50% 86%;
-    --brand-1: 221 83% 50%;
-    --brand-2: 239 70% 56%;
-    --brand-3: 190 90% 36%;
-    --brand-4: 168 70% 32%;
-    --brand-5: 199 89% 42%;
-    --glass-bg: 0 0% 100% / 0.6;
-    --glass-border: 220 80% 40% / 0.16;
-    --grid-line: 220 80% 40% / 0.08;
+    --muted: 211 60% 93.1%;
+    --muted-foreground: 214 25% 40.2%;
+    --border: 213 43% 86.9%;
+    --brand-1: 212 76% 50%;
+    --brand-2: 233 70% 59.4%;
+    --brand-3: 192 91% 36.5%;
+    --brand-4: 175 84% 31.6%;
+    --brand-5: 209 54% 50%;
+    --on-grad: 0 0% 100%;
+    --glass-bg: 0 0% 100% / 0.65;
+    --glass-border: 212 60% 40% / 0.14;
+    --grid-line: 212 60% 40% / 0.07;
+    --grad-text: linear-gradient(180deg, #5fb2ff 0%, #1f6fe0 55%, #3b3fc9 100%);
+    --grad-fill: linear-gradient(135deg, #4aa8ff 0%, #1f6fe0 55%, #4f5fe0 100%);
   }
   .dark {
-    --background: 224 60% 6%;
-    --foreground: 210 50% 97%;
-    --surface: 224 50% 9%;
-    --muted: 222 35% 16%;
-    --muted-foreground: 215 20% 72%;
-    --border: 222 35% 20%;
-    --brand-1: 217 95% 62%;
-    --brand-2: 239 84% 70%;
-    --brand-3: 189 94% 50%;
-    --brand-4: 168 76% 58%;
-    --brand-5: 199 95% 64%;
-    --glass-bg: 224 50% 13% / 0.45;
-    --glass-border: 0 0% 100% / 0.09;
-    --grid-line: 210 90% 75% / 0.06;
+    --background: 219 70% 6.5%;
+    --foreground: 209 100% 95.9%;
+    --surface: 216 60% 9.8%;
+    --muted: 216 53% 14.9%;
+    --muted-foreground: 214 31% 67.6%;
+    --border: 216 46% 19%;
+    --brand-1: 209 100% 64.5%;
+    --brand-2: 232 100% 74.5%;
+    --brand-3: 188 100% 78%;
+    --brand-4: 171 77% 64.3%;
+    --brand-5: 203 100% 87.5%;
+    --on-grad: 0 0% 100%;
+    --glass-bg: 214 60% 14% / 0.45;
+    --glass-border: 205 100% 88% / 0.12;
+    --grid-line: 205 100% 85% / 0.06;
+    --grad-text: linear-gradient(180deg, #ffffff 0%, #d6eeff 32%, #7cc2ff 68%, #4a8dff 100%);
+    --grad-fill: linear-gradient(135deg, #7cc8ff 0%, #4a8dff 45%, #6d6bff 100%);
   }
 
-  /* candy */
-  [data-palette="candy"] {
-    --background: 270 100% 98.5%;
-    --foreground: 260 45% 12%;
+  /* Glacier Chrome */
+  [data-palette="glacier"] {
+    --font-display: 'Unbounded Variable';
+    --font-body: 'Manrope Variable';
+    --display-scale: 0.72;
+    --display-variation: normal;
+    --display-tracking: -0.04em;
+    --background: 213 73% 97.1%;
+    --foreground: 215 70% 9.2%;
     --surface: 0 0% 100%;
-    --muted: 268 60% 94%;
-    --muted-foreground: 260 14% 40%;
-    --border: 266 40% 86%;
-    --brand-1: 328 90% 52%;
-    --brand-2: 262 83% 58%;
-    --brand-3: 190 90% 40%;
-    --brand-4: 84 75% 38%;
-    --brand-5: 32 95% 50%;
-    --glass-bg: 0 0% 100% / 0.6;
-    --glass-border: 262 60% 60% / 0.18;
-    --grid-line: 262 60% 50% / 0.08;
+    --muted: 211 60% 93.1%;
+    --muted-foreground: 214 25% 40.2%;
+    --border: 213 43% 86.9%;
+    --brand-1: 212 76% 50%;
+    --brand-2: 233 70% 59.4%;
+    --brand-3: 192 91% 36.5%;
+    --brand-4: 175 84% 31.6%;
+    --brand-5: 209 54% 50%;
+    --on-grad: 0 0% 100%;
+    --glass-bg: 0 0% 100% / 0.65;
+    --glass-border: 212 60% 40% / 0.14;
+    --grid-line: 212 60% 40% / 0.07;
+    --grad-text: linear-gradient(180deg, #5fb2ff 0%, #1f6fe0 55%, #3b3fc9 100%);
+    --grad-fill: linear-gradient(135deg, #4aa8ff 0%, #1f6fe0 55%, #4f5fe0 100%);
   }
-  .dark[data-palette="candy"],
-  .dark [data-palette="candy"] {
-    --background: 262 60% 6%;
-    --foreground: 270 40% 97%;
-    --surface: 262 45% 9%;
-    --muted: 262 30% 16%;
-    --muted-foreground: 262 18% 72%;
-    --border: 262 30% 20%;
-    --brand-1: 328 100% 62%;
-    --brand-2: 258 90% 66%;
-    --brand-3: 188 86% 53%;
-    --brand-4: 82 85% 55%;
-    --brand-5: 38 100% 60%;
-    --glass-bg: 262 50% 14% / 0.45;
-    --glass-border: 0 0% 100% / 0.09;
-    --grid-line: 270 80% 80% / 0.06;
+  .dark[data-palette="glacier"],
+  .dark [data-palette="glacier"] {
+    --background: 219 70% 6.5%;
+    --foreground: 209 100% 95.9%;
+    --surface: 216 60% 9.8%;
+    --muted: 216 53% 14.9%;
+    --muted-foreground: 214 31% 67.6%;
+    --border: 216 46% 19%;
+    --brand-1: 209 100% 64.5%;
+    --brand-2: 232 100% 74.5%;
+    --brand-3: 188 100% 78%;
+    --brand-4: 171 77% 64.3%;
+    --brand-5: 203 100% 87.5%;
+    --on-grad: 0 0% 100%;
+    --glass-bg: 214 60% 14% / 0.45;
+    --glass-border: 205 100% 88% / 0.12;
+    --grid-line: 205 100% 85% / 0.06;
+    --grad-text: linear-gradient(180deg, #ffffff 0%, #d6eeff 32%, #7cc2ff 68%, #4a8dff 100%);
+    --grad-fill: linear-gradient(135deg, #7cc8ff 0%, #4a8dff 45%, #6d6bff 100%);
   }
 
-  /* aurora */
-  [data-palette="aurora"] {
-    --background: 150 60% 97%;
-    --foreground: 190 50% 10%;
+  /* Lagoon & Coral */
+  [data-palette="lagoon"] {
+    --font-display: 'Fredoka Variable';
+    --font-body: 'Nunito Variable';
+    --display-scale: 1.05;
+    --display-variation: normal;
+    --display-tracking: -0.01em;
+    --background: 168 56% 96.5%;
+    --foreground: 182 75% 9.4%;
     --surface: 0 0% 100%;
-    --muted: 155 40% 92%;
-    --muted-foreground: 190 12% 38%;
-    --border: 160 30% 84%;
-    --brand-1: 160 84% 34%;
-    --brand-2: 199 89% 42%;
-    --brand-3: 262 70% 58%;
-    --brand-4: 85 70% 34%;
-    --brand-5: 174 80% 32%;
-    --glass-bg: 0 0% 100% / 0.6;
-    --glass-border: 170 60% 30% / 0.16;
-    --grid-line: 170 60% 30% / 0.08;
+    --muted: 170 49% 90.8%;
+    --muted-foreground: 174 20% 36.5%;
+    --border: 171 39% 83.9%;
+    --brand-1: 176 89% 34.9%;
+    --brand-2: 11 86% 58.4%;
+    --brand-3: 162 80% 35.9%;
+    --brand-4: 160 83% 34.1%;
+    --brand-5: 30 68% 53.9%;
+    --on-grad: 180 87% 8.8%;
+    --glass-bg: 0 0% 100% / 0.65;
+    --glass-border: 176 60% 30% / 0.14;
+    --grid-line: 176 60% 30% / 0.07;
+    --grad-text: linear-gradient(100deg, #08a99e 0%, #12b886 35%, #f08c4a 70%, #f05a3a 100%);
+    --grad-fill: linear-gradient(110deg, #19e3d4 0%, #7cf5c8 40%, #ffb38a 75%, #ff7a5c 100%);
   }
-  .dark[data-palette="aurora"],
-  .dark [data-palette="aurora"] {
-    --background: 195 55% 5%;
-    --foreground: 160 30% 96%;
-    --surface: 190 45% 8%;
-    --muted: 190 30% 14%;
-    --muted-foreground: 180 12% 70%;
-    --border: 185 30% 18%;
-    --brand-1: 158 85% 48%;
-    --brand-2: 199 95% 60%;
-    --brand-3: 262 90% 76%;
-    --brand-4: 84 85% 58%;
-    --brand-5: 174 85% 45%;
-    --glass-bg: 190 50% 12% / 0.45;
-    --glass-border: 0 0% 100% / 0.09;
-    --grid-line: 160 80% 70% / 0.06;
+  .dark[data-palette="lagoon"],
+  .dark [data-palette="lagoon"] {
+    --background: 186 78% 5.3%;
+    --foreground: 166 68% 96.3%;
+    --surface: 186 71% 8.2%;
+    --muted: 185 63% 11.8%;
+    --muted-foreground: 172 25% 64.9%;
+    --border: 183 53% 15.1%;
+    --brand-1: 176 80% 49.4%;
+    --brand-2: 11 100% 68%;
+    --brand-3: 158 86% 72.4%;
+    --brand-4: 158 86% 72.4%;
+    --brand-5: 33 100% 82.4%;
+    --on-grad: 180 87% 8.8%;
+    --glass-bg: 184 70% 9% / 0.5;
+    --glass-border: 170 100% 90% / 0.1;
+    --grid-line: 176 80% 60% / 0.07;
+    --grad-text: linear-gradient(100deg, #19e3d4 0%, #7cf5c8 30%, #ffd6a5 62%, #ff7a5c 100%);
+    --grad-fill: linear-gradient(110deg, #19e3d4 0%, #7cf5c8 40%, #ffb38a 75%, #ff7a5c 100%);
   }
 
-  /* sunset */
-  [data-palette="sunset"] {
-    --background: 30 100% 97%;
-    --foreground: 345 45% 12%;
-    --surface: 0 0% 100%;
-    --muted: 25 80% 93%;
-    --muted-foreground: 345 12% 40%;
-    --border: 20 50% 86%;
-    --brand-1: 20 92% 48%;
-    --brand-2: 346 80% 50%;
-    --brand-3: 292 70% 48%;
-    --brand-4: 38 95% 42%;
-    --brand-5: 4 80% 50%;
-    --glass-bg: 0 0% 100% / 0.6;
-    --glass-border: 20 80% 40% / 0.16;
-    --grid-line: 20 80% 40% / 0.08;
+  /* Ink & Ultramarine */
+  [data-palette="ink"] {
+    --font-display: 'Fraunces Variable';
+    --font-body: 'Plus Jakarta Sans Variable';
+    --display-scale: 1.08;
+    --display-variation: "SOFT" 100, "WONK" 1;
+    --display-tracking: -0.03em;
+    --background: 45 31% 94.9%;
+    --foreground: 235 22% 10%;
+    --surface: 43 100% 98.6%;
+    --muted: 45 23% 89.8%;
+    --muted-foreground: 237 9% 39.6%;
+    --border: 45 19% 83.1%;
+    --brand-1: 235 100% 58.4%;
+    --brand-2: 11 100% 60.6%;
+    --brand-3: 250 100% 65.1%;
+    --brand-4: 156 76% 36.3%;
+    --brand-5: 235 100% 73.9%;
+    --on-grad: 0 0% 100%;
+    --glass-bg: 40 60% 99% / 0.7;
+    --glass-border: 235 20% 15% / 0.12;
+    --grid-line: 235 20% 15% / 0.06;
+    --grad-text: linear-gradient(100deg, #2b3cff 0%, #6b4dff 45%, #ff5a36 100%);
+    --grad-fill: linear-gradient(110deg, #2b3cff 0%, #6b4dff 50%, #ff5a36 100%);
   }
-  .dark[data-palette="sunset"],
-  .dark [data-palette="sunset"] {
-    --background: 345 40% 6%;
-    --foreground: 30 60% 96%;
-    --surface: 345 35% 9%;
-    --muted: 345 25% 15%;
-    --muted-foreground: 20 15% 72%;
-    --border: 345 25% 20%;
-    --brand-1: 22 98% 58%;
-    --brand-2: 346 90% 62%;
-    --brand-3: 292 85% 66%;
-    --brand-4: 45 98% 58%;
-    --brand-5: 4 90% 60%;
-    --glass-bg: 345 40% 13% / 0.45;
-    --glass-border: 0 0% 100% / 0.09;
-    --grid-line: 20 90% 75% / 0.06;
-  }
-
-  /* ocean */
-  [data-palette="ocean"] {
-    --background: 210 100% 97.5%;
-    --foreground: 224 60% 12%;
-    --surface: 0 0% 100%;
-    --muted: 214 70% 93%;
-    --muted-foreground: 220 15% 40%;
-    --border: 214 50% 86%;
-    --brand-1: 221 83% 50%;
-    --brand-2: 239 70% 56%;
-    --brand-3: 190 90% 36%;
-    --brand-4: 168 70% 32%;
-    --brand-5: 199 89% 42%;
-    --glass-bg: 0 0% 100% / 0.6;
-    --glass-border: 220 80% 40% / 0.16;
-    --grid-line: 220 80% 40% / 0.08;
-  }
-  .dark[data-palette="ocean"],
-  .dark [data-palette="ocean"] {
-    --background: 224 60% 6%;
-    --foreground: 210 50% 97%;
-    --surface: 224 50% 9%;
-    --muted: 222 35% 16%;
-    --muted-foreground: 215 20% 72%;
-    --border: 222 35% 20%;
-    --brand-1: 217 95% 62%;
-    --brand-2: 239 84% 70%;
-    --brand-3: 189 94% 50%;
-    --brand-4: 168 76% 58%;
-    --brand-5: 199 95% 64%;
-    --glass-bg: 224 50% 13% / 0.45;
-    --glass-border: 0 0% 100% / 0.09;
-    --grid-line: 210 90% 75% / 0.06;
-  }
-
-  /* gold */
-  [data-palette="gold"] {
-    --background: 45 70% 97%;
-    --foreground: 250 35% 12%;
-    --surface: 0 0% 100%;
-    --muted: 45 50% 91%;
-    --muted-foreground: 250 10% 40%;
-    --border: 42 40% 84%;
-    --brand-1: 40 92% 40%;
-    --brand-2: 270 65% 50%;
-    --brand-3: 330 70% 50%;
-    --brand-4: 35 60% 45%;
-    --brand-5: 25 90% 48%;
-    --glass-bg: 0 0% 100% / 0.6;
-    --glass-border: 40 70% 35% / 0.18;
-    --grid-line: 40 70% 35% / 0.08;
-  }
-  .dark[data-palette="gold"],
-  .dark [data-palette="gold"] {
-    --background: 250 30% 5%;
-    --foreground: 45 50% 95%;
-    --surface: 250 25% 9%;
-    --muted: 250 18% 15%;
-    --muted-foreground: 45 12% 70%;
-    --border: 250 18% 20%;
-    --brand-1: 43 96% 58%;
-    --brand-2: 270 80% 66%;
-    --brand-3: 330 85% 70%;
-    --brand-4: 40 70% 80%;
-    --brand-5: 25 95% 60%;
-    --glass-bg: 250 25% 12% / 0.45;
-    --glass-border: 0 0% 100% / 0.09;
-    --grid-line: 45 90% 75% / 0.06;
+  .dark[data-palette="ink"],
+  .dark [data-palette="ink"] {
+    --background: 233 22% 8%;
+    --foreground: 45 31% 94.9%;
+    --surface: 235 21% 11.4%;
+    --muted: 235 26% 18%;
+    --muted-foreground: 237 11% 68.6%;
+    --border: 235 21% 20.8%;
+    --brand-1: 235 100% 71.8%;
+    --brand-2: 11 100% 68%;
+    --brand-3: 251 100% 77.3%;
+    --brand-4: 158 64% 51.6%;
+    --brand-5: 232 100% 86.3%;
+    --on-grad: 0 0% 100%;
+    --glass-bg: 235 25% 12% / 0.55;
+    --glass-border: 40 40% 95% / 0.1;
+    --grid-line: 40 40% 95% / 0.05;
+    --grad-text: linear-gradient(100deg, #8a95ff 0%, #a08bff 45%, #ff7a5c 100%);
+    --grad-fill: linear-gradient(110deg, #4a57ff 0%, #7a5cff 50%, #ff6a45 100%);
   }
 
   * {
@@ -275,6 +249,15 @@
     @apply font-display tracking-tight;
   }
 
+  /* Theme-specific display-face personality (e.g. Fraunces' soft, wonky axes) */
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-variation-settings: var(--display-variation, normal);
+  }
+
   ::selection {
     background: hsl(var(--brand-1) / 0.35);
   }
@@ -301,15 +284,10 @@
     backdrop-filter: blur(18px) saturate(160%);
   }
 
+  /* Each theme ships its own gradient style (chrome, tropical sweep, ink-to-vermilion) */
   .text-gradient {
-    background-image: linear-gradient(
-      100deg,
-      hsl(var(--brand-1)),
-      hsl(var(--brand-2)) 35%,
-      hsl(var(--brand-3)) 65%,
-      hsl(var(--brand-1))
-    );
-    background-size: 250% 100%;
+    background-image: var(--grad-text);
+    background-size: 160% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -317,13 +295,9 @@
   }
 
   .bg-candy {
-    background-image: linear-gradient(
-      110deg,
-      hsl(var(--brand-1)),
-      hsl(var(--brand-2)) 50%,
-      hsl(var(--brand-3))
-    );
-    background-size: 200% 100%;
+    background-image: var(--grad-fill);
+    background-size: 160% 100%;
+    color: hsl(var(--on-grad));
   }
 
   /* Animated conic gradient border — add to a relative, rounded element */

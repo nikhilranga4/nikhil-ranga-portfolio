@@ -242,7 +242,7 @@ const Hero = () => {
 
                   <h1
                     aria-label="Nikhil Ranga"
-                    className="mb-5 font-display text-[clamp(3.4rem,17vw,5.5rem)] font-extrabold leading-[1.02] tracking-[-0.03em] lg:whitespace-nowrap lg:text-[clamp(4rem,6.2vw,6.25rem)]"
+                    className="mb-5 font-display text-[calc(clamp(3.4rem,17vw,5.5rem)*var(--display-scale,1))] font-extrabold leading-[1.02] tracking-[var(--display-tracking,-0.03em)] lg:whitespace-nowrap lg:text-[calc(clamp(4rem,6.2vw,6.25rem)*var(--display-scale,1))]"
                   >
                     <span aria-hidden className="block text-foreground lg:inline">
                       {NAME[0].split("").map((char) => {
@@ -313,7 +313,7 @@ const Hero = () => {
                         type="button"
                         onClick={() => setShowResume(true)}
                         whileTap={{ scale: 0.95 }}
-                        className="bg-candy group relative flex w-full animate-gradient-x items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-7 py-4 font-display text-base font-bold text-white shadow-glow-1 sm:w-auto sm:rounded-full"
+                        className="bg-candy group relative flex w-full animate-gradient-x items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-7 py-4 font-display text-base font-bold text-on-grad shadow-glow-1 sm:w-auto sm:rounded-full"
                       >
                         <FileText className="h-5 w-5 transition-transform group-hover:-rotate-12" />
                         View Resume

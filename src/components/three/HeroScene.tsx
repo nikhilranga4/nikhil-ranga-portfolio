@@ -28,7 +28,7 @@ const TOTAL_CHARS = CODE.reduce((n, line) => n + line.reduce((m, [, t]) => m + t
 
 const W = 1024;
 const H = 640;
-const FONT = '600 34px "JetBrains Mono", ui-monospace, monospace';
+const FONT = '600 34px "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace';
 
 function drawEditor(ctx: CanvasRenderingContext2D, colors: PaletteColors, shown: number, blink: boolean) {
   const palette: Record<TokenKind, string> = {
@@ -56,7 +56,7 @@ function drawEditor(ctx: CanvasRenderingContext2D, colors: PaletteColors, shown:
   ctx.fillRect(140, 14, 230, 50);
   ctx.fillStyle = colors.c1;
   ctx.fillRect(140, 14, 230, 4);
-  ctx.font = '22px "JetBrains Mono", ui-monospace, monospace';
+  ctx.font = '22px "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace';
   ctx.fillStyle = "#e6ebf5";
   ctx.fillText("developer.tsx", 164, 48);
 
@@ -91,7 +91,7 @@ function drawEditor(ctx: CanvasRenderingContext2D, colors: PaletteColors, shown:
   // Status bar
   ctx.fillStyle = colors.c1;
   ctx.fillRect(0, H - 40, W, 40);
-  ctx.font = '20px "JetBrains Mono", ui-monospace, monospace';
+  ctx.font = '20px "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace';
   ctx.fillStyle = "#0b1020";
   ctx.fillText("● main   TypeScript React   UTF-8", 24, H - 13);
 }

@@ -38,7 +38,7 @@ const GitHubContributions = () => {
                   rel="noopener noreferrer"
                   className="group flex items-center gap-3"
                 >
-                  <span className="bg-candy flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-glow-1 transition-transform group-hover:rotate-12">
+                  <span className="bg-candy flex h-12 w-12 items-center justify-center rounded-2xl text-on-grad shadow-glow-1 transition-transform group-hover:rotate-12">
                     <Github className="h-6 w-6" />
                   </span>
                   <span className="font-display text-xl font-bold transition-colors group-hover:text-brand-1">
