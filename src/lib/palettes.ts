@@ -4,14 +4,14 @@
  * resolved values back as hex for places CSS can't reach (WebGL materials, image URLs).
  */
 export const PALETTES = [
-  { id: "glacier", name: "Glacier Chrome", emoji: "❄️", fonts: "Unbounded · Manrope" },
   { id: "lagoon", name: "Lagoon & Coral", emoji: "🏝️", fonts: "Fredoka · Nunito" },
+  { id: "glacier", name: "Glacier Chrome", emoji: "❄️", fonts: "Unbounded · Manrope" },
   { id: "ink", name: "Ink & Ultramarine", emoji: "🖋️", fonts: "Fraunces · Plus Jakarta" },
 ] as const;
 
 export type PaletteId = (typeof PALETTES)[number]["id"];
 
-export const DEFAULT_PALETTE: PaletteId = "glacier";
+export const DEFAULT_PALETTE: PaletteId = "lagoon";
 
 export const isPaletteId = (value: unknown): value is PaletteId =>
   PALETTES.some((p) => p.id === value);
@@ -27,13 +27,13 @@ export interface PaletteColors {
 }
 
 export const FALLBACK_COLORS: PaletteColors = {
-  c1: "#4aa8ff",
-  c2: "#7d8fff",
-  c3: "#8ff0ff",
-  c4: "#5eead4",
-  c5: "#bfe6ff",
-  background: "#050d1c",
-  foreground: "#eaf5ff",
+  c1: "#19e3d4",
+  c2: "#ff7a5c",
+  c3: "#7cf5c8",
+  c4: "#7cf5c8",
+  c5: "#ffd6a5",
+  background: "#031618",
+  foreground: "#effcf9",
 };
 
 function hslToHex(h: number, s: number, l: number) {

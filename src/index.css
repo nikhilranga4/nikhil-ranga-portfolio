@@ -30,49 +30,49 @@
     --radius: 1.25rem;
   }
 
-  /* Fallback (no data-palette yet): Glacier Chrome, the default theme */
+  /* Fallback (no data-palette yet): Lagoon & Coral, the default theme */
   :root {
-    --font-display: 'Unbounded Variable';
-    --font-body: 'Manrope Variable';
-    --display-scale: 0.72;
+    --font-display: 'Fredoka Variable';
+    --font-body: 'Nunito Variable';
+    --display-scale: 1.05;
     --display-variation: normal;
-    --display-tracking: -0.04em;
-    --background: 213 73% 97.1%;
-    --foreground: 215 70% 9.2%;
+    --display-tracking: -0.01em;
+    --background: 168 56% 96.5%;
+    --foreground: 182 75% 9.4%;
     --surface: 0 0% 100%;
-    --muted: 211 60% 93.1%;
-    --muted-foreground: 214 25% 40.2%;
-    --border: 213 43% 86.9%;
-    --brand-1: 212 76% 50%;
-    --brand-2: 233 70% 59.4%;
-    --brand-3: 192 91% 36.5%;
-    --brand-4: 175 84% 31.6%;
-    --brand-5: 209 54% 50%;
-    --on-grad: 0 0% 100%;
+    --muted: 170 49% 90.8%;
+    --muted-foreground: 174 20% 36.5%;
+    --border: 171 39% 83.9%;
+    --brand-1: 176 89% 34.9%;
+    --brand-2: 11 86% 58.4%;
+    --brand-3: 162 80% 35.9%;
+    --brand-4: 160 83% 34.1%;
+    --brand-5: 30 68% 53.9%;
+    --on-grad: 180 87% 8.8%;
     --glass-bg: 0 0% 100% / 0.65;
-    --glass-border: 212 60% 40% / 0.14;
-    --grid-line: 212 60% 40% / 0.07;
-    --grad-text: linear-gradient(180deg, #5fb2ff 0%, #1f6fe0 55%, #3b3fc9 100%);
-    --grad-fill: linear-gradient(135deg, #4aa8ff 0%, #1f6fe0 55%, #4f5fe0 100%);
+    --glass-border: 176 60% 30% / 0.14;
+    --grid-line: 176 60% 30% / 0.07;
+    --grad-text: linear-gradient(100deg, #08a99e 0%, #12b886 35%, #f08c4a 70%, #f05a3a 100%);
+    --grad-fill: linear-gradient(110deg, #19e3d4 0%, #7cf5c8 40%, #ffb38a 75%, #ff7a5c 100%);
   }
   .dark {
-    --background: 219 70% 6.5%;
-    --foreground: 209 100% 95.9%;
-    --surface: 216 60% 9.8%;
-    --muted: 216 53% 14.9%;
-    --muted-foreground: 214 31% 67.6%;
-    --border: 216 46% 19%;
-    --brand-1: 209 100% 64.5%;
-    --brand-2: 232 100% 74.5%;
-    --brand-3: 188 100% 78%;
-    --brand-4: 171 77% 64.3%;
-    --brand-5: 203 100% 87.5%;
-    --on-grad: 0 0% 100%;
-    --glass-bg: 214 60% 14% / 0.45;
-    --glass-border: 205 100% 88% / 0.12;
-    --grid-line: 205 100% 85% / 0.06;
-    --grad-text: linear-gradient(180deg, #ffffff 0%, #d6eeff 32%, #7cc2ff 68%, #4a8dff 100%);
-    --grad-fill: linear-gradient(135deg, #7cc8ff 0%, #4a8dff 45%, #6d6bff 100%);
+    --background: 186 78% 5.3%;
+    --foreground: 166 68% 96.3%;
+    --surface: 186 71% 8.2%;
+    --muted: 185 63% 11.8%;
+    --muted-foreground: 172 25% 64.9%;
+    --border: 183 53% 15.1%;
+    --brand-1: 176 80% 49.4%;
+    --brand-2: 11 100% 68%;
+    --brand-3: 158 86% 72.4%;
+    --brand-4: 158 86% 72.4%;
+    --brand-5: 33 100% 82.4%;
+    --on-grad: 180 87% 8.8%;
+    --glass-bg: 184 70% 9% / 0.5;
+    --glass-border: 170 100% 90% / 0.1;
+    --grid-line: 176 80% 60% / 0.07;
+    --grad-text: linear-gradient(100deg, #19e3d4 0%, #7cf5c8 30%, #ffd6a5 62%, #ff7a5c 100%);
+    --grad-fill: linear-gradient(110deg, #19e3d4 0%, #7cf5c8 40%, #ffb38a 75%, #ff7a5c 100%);
   }
 
   /* Glacier Chrome */

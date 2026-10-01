@@ -17,7 +17,7 @@ const SectionHeading = ({ index, eyebrow, title, subtitle, className, bgText }: 
 
   return (
     <div className={cn("relative isolate mb-10 pt-4 text-center sm:mb-16 sm:pt-6", className)}>
-      <ParallaxText text={bgText ?? eyebrow} direction={Number(index) % 2 ? 1 : -1} className="-top-4 sm:-top-10" />
+      <ParallaxText text={bgText ?? eyebrow} direction={Number(index) % 2 ? 1 : -1} className="top-1/2 -translate-y-[58%]" />
       <motion.p
         initial={{ opacity: 0, y: 12 }}
         whileInView={{ opacity: 1, y: 0 }}
