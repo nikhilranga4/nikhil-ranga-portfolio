@@ -1,28 +1,37 @@
-import { Component, Suspense, lazy, useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import {
+  Component,
+  Suspense,
+  lazy,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import {
   animate,
   motion,
   useMotionValue,
   useReducedMotion,
   useScroll,
-  useSpring,
   useTransform,
   type Variants,
 } from "framer-motion";
-import { FileText, Github, Linkedin, Mail, Sparkles } from "lucide-react";
+import { ArrowDownRight, FileText, Github, Linkedin, Mail, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/components/theme-provider";
 import { Magnetic } from "@/components/ui/magnetic";
 import Marquee from "@/components/ui/marquee";
-import { TiltCard } from "@/components/ui/tilt-card";
+import { cn } from "@/lib/utils";
 
 // Start fetching the 3D chunk immediately so it's ready by the time the loader finishes
 const heroSceneImport = import("@/components/three/HeroScene");
 const HeroScene = lazy(() => heroSceneImport);
 
 const ROLES = ["Full Stack Developer", "AI/ML Engineer", "React Native Dev", "Creative Coder"];
-const NAME = ["Nikhil", "Ranga"];
+const FIRST = "Nikhil";
+const LAST = "Ranga";
 
 const SOCIALS = [
   { href: "https://github.com/nikhilranga4", label: "GitHub", icon: Github },
@@ -34,9 +43,9 @@ const DEVICON = "https://cdn.jsdelivr.net/gh/devicons/devicon/icons";
 const STACK = [
   { name: "React", icon: `${DEVICON}/react/react-original.svg` },
   { name: "TypeScript", icon: `${DEVICON}/typescript/typescript-original.svg` },
-  { name: "JavaScript", icon: `${DEVICON}/javascript/javascript-original.svg` },
-  { name: "Python", icon: `${DEVICON}/python/python-original.svg` },
+  { name: "React Native", icon: `${DEVICON}/react/react-original.svg` },
   { name: "Node.js", icon: `${DEVICON}/nodejs/nodejs-original.svg` },
+  { name: "Python", icon: `${DEVICON}/python/python-original.svg` },
   { name: "MongoDB", icon: `${DEVICON}/mongodb/mongodb-original.svg` },
   { name: "Tailwind", icon: `${DEVICON}/tailwindcss/tailwindcss-original.svg` },
   { name: "Django", icon: `${DEVICON}/django/django-plain.svg` },
@@ -44,21 +53,20 @@ const STACK = [
   { name: "Figma", icon: `${DEVICON}/figma/figma-original.svg` },
 ];
 
+const TAPE = ["Available for work", "Open to collaborations", "Based in Hyderabad", "Web · Mobile · AI"];
+
+/** Letters start "typing" in once the loader's columns begin to lift. */
+const NAME_DELAY = 0.55;
+const LETTER_GAP = 0.06;
+
 const container: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.12, delayChildren: 0.45 } },
+  show: { transition: { staggerChildren: 0.1, delayChildren: NAME_DELAY + 0.5 } },
 };
 const item: Variants = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 0, y: 22 },
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 140, damping: 18 } },
 };
-
-/** Gradient-orb fallback while the 3D chunk loads, or if WebGL is unavailable. */
-const SceneFallback = () => (
-  <div className="flex h-full w-full items-center justify-center">
-    <div className="h-40 w-40 animate-float rounded-full bg-candy opacity-80 blur-2xl" />
-  </div>
-);
 
 class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -66,7 +74,7 @@ class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean
     return { failed: true };
   }
   render() {
-    return this.state.failed ? <SceneFallback /> : this.props.children;
+    return this.state.failed ? null : this.props.children;
   }
 }
 
@@ -96,6 +104,17 @@ function useTypewriter(words: string[]) {
   return text;
 }
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
+}
+
 /** Number that counts up from 0 on mount. */
 const CountUp = ({ to, suffix = "", delay = 0 }: { to: number; suffix?: string; delay?: number }) => {
   const value = useMotionValue(0);
@@ -107,19 +126,6 @@ const CountUp = ({ to, suffix = "", delay = 0 }: { to: number; suffix?: string; 
   return <motion.span>{rounded}</motion.span>;
 };
 
-/** One letter of the name: rises softly into place and lifts a little on hover. */
-const NameLetter = ({ char, index }: { char: string; index: number }) => (
-  <motion.span
-    initial={{ opacity: 0, y: "0.55em" }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ type: "spring", stiffness: 120, damping: 16, delay: 0.35 + index * 0.035 }}
-    whileHover={{ y: "-0.08em", scale: 1.06 }}
-    className="inline-block cursor-default"
-  >
-    {char}
-  </motion.span>
-);
-
 const PulseDot = () => (
   <span className="relative flex h-2 w-2 shrink-0">
     <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-brand-4" />
@@ -127,271 +133,342 @@ const PulseDot = () => (
   </span>
 );
 
+// ── The name ───────────────────────────────────────────────────────────────
+
+const NAME_TEXT = "font-display font-bold leading-[0.92] tracking-[var(--display-tracking,-0.03em)] whitespace-nowrap";
+
+/**
+ * Gradient for one letter of the last name: each letter paints its own slice of the theme's
+ * text gradient, so letters can move independently without breaking `background-clip: text`.
+ */
+const sliceStyle = (k: number, n: number): CSSProperties => ({
+  backgroundImage: "var(--grad-text)",
+  backgroundSize: `${n * 100}% 100%`,
+  backgroundPosition: `${(k / (n - 1)) * 100}% 0`,
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
+});
+
+/** One letter: types in like a key press and dips down (pressed) on hover or tap. */
+const Letter = ({ char, order, style }: { char: string; order: number; style?: CSSProperties }) => (
+  <motion.span
+    initial={{ opacity: 0, y: "-0.3em", scale: 0.6 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    transition={{ type: "spring", stiffness: 520, damping: 22, delay: NAME_DELAY + order * LETTER_GAP }}
+    whileHover={{ y: "0.06em", scale: 0.93 }}
+    whileTap={{ y: "0.08em", scale: 0.9 }}
+    className="-mb-[0.16em] inline-block cursor-default pb-[0.16em]"
+    style={style}
+  >
+    {char}
+  </motion.span>
+);
+
+const Caret = () => (
+  <motion.span
+    aria-hidden
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ delay: NAME_DELAY + (FIRST.length + LAST.length) * LETTER_GAP }}
+    className="ml-[0.05em] inline-block h-[0.72em] w-[0.06em] translate-y-[0.04em] rounded-[0.02em] bg-brand-1"
+  >
+    <span className="block h-full w-full animate-blink bg-brand-1" />
+  </motion.span>
+);
+
+/** Invisible copy of the name at 100px, used to fit the real one to the available width. */
+const NameProbe = ({ text, probeRef }: { text: string; probeRef: RefObject<HTMLSpanElement> }) => (
+  <span ref={probeRef} aria-hidden className={cn(NAME_TEXT, "invisible absolute left-0 top-0")} style={{ fontSize: 100 }}>
+    {text.split("").map((c, i) => (
+      <span key={i} className="inline-block">
+        {c === " " ? " " : c}
+      </span>
+    ))}
+    <span className="ml-[0.05em] inline-block w-[0.06em]" />
+  </span>
+);
+
+/**
+ * Sizes the name so it fills the column: one line from `sm` up (also capped by viewport height),
+ * two stacked lines on phones where the longer word spans the width. Re-fits on resize, when
+ * fonts load and when the theme (and so the display font) changes.
+ */
+function useNameFit() {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const fullRef = useRef<HTMLSpanElement>(null);
+  const firstRef = useRef<HTMLSpanElement>(null);
+  const lastRef = useRef<HTMLSpanElement>(null);
+  const [size, setSize] = useState<number | null>(null);
+  const [stacked, setStacked] = useState(() => window.innerWidth < 640);
+
+  useEffect(() => {
+    const fit = () => {
+      const box = boxRef.current;
+      if (!box || !fullRef.current || !firstRef.current || !lastRef.current) return;
+      const avail = box.clientWidth;
+      const narrow = window.innerWidth < 640;
+      setStacked(narrow);
+      if (narrow) {
+        const widest = Math.max(firstRef.current.offsetWidth, lastRef.current.offsetWidth);
+        if (widest) setSize(Math.min((avail * 0.98 * 100) / widest, 180));
+      } else {
+        const width = fullRef.current.offsetWidth;
+        if (width) setSize(Math.min((Math.min(avail * 0.84, 1120) * 100) / width, window.innerHeight * 0.2));
+      }
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    document.fonts?.addEventListener("loadingdone", fit);
+    document.fonts?.ready.then(fit).catch(() => undefined);
+    const observer = new MutationObserver(() => requestAnimationFrame(fit));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-palette"] });
+    return () => {
+      window.removeEventListener("resize", fit);
+      document.fonts?.removeEventListener("loadingdone", fit);
+      observer.disconnect();
+    };
+  }, []);
+
+  return { boxRef, fullRef, firstRef, lastRef, size, stacked };
+}
+
+const Name = () => {
+  const { boxRef, fullRef, firstRef, lastRef, size, stacked } = useNameFit();
+  return (
+    <div ref={boxRef} className="relative w-full">
+      <NameProbe text={`${FIRST} ${LAST}`} probeRef={fullRef} />
+      <NameProbe text={FIRST} probeRef={firstRef} />
+      <NameProbe text={LAST} probeRef={lastRef} />
+      <h1
+        aria-label={`${FIRST} ${LAST}`}
+        className={cn(NAME_TEXT, "relative text-center")}
+        style={{ fontSize: size ?? "clamp(3.5rem, 13vw, 11rem)" }}
+      >
+        <span aria-hidden className={cn("text-foreground", stacked ? "block" : "inline")}>
+          {FIRST.split("").map((c, i) => (
+            <Letter key={i} char={c} order={i} />
+          ))}
+        </span>
+        {!stacked && <span aria-hidden>{" "}</span>}
+        <span aria-hidden className={stacked ? "block" : "inline"}>
+          {LAST.split("").map((c, i) => (
+            <Letter key={i} char={c} order={FIRST.length + i} style={sliceStyle(i, LAST.length)} />
+          ))}
+          <Caret />
+        </span>
+      </h1>
+    </div>
+  );
+};
+
+// ── Small pieces ───────────────────────────────────────────────────────────
+
+/** A stat drawn as a keycap that presses down under the pointer. */
+const StatKey = ({ children, label, className }: { children: ReactNode; label: string; className?: string }) => {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <div
+      data-pressed={pressed}
+      onPointerEnter={() => setPressed(true)}
+      onPointerLeave={() => setPressed(false)}
+      className={cn("keycap px-4 py-2.5 text-left sm:px-5 sm:py-3", className)}
+    >
+      <div className="relative font-display text-xl font-bold leading-tight sm:text-2xl">{children}</div>
+      <p className="relative mt-0.5 font-mono text-[0.62rem] uppercase tracking-widest text-muted-foreground">{label}</p>
+    </div>
+  );
+};
+
+/** Two crossing tapes running along the bottom of the hero. */
+const Tapes = () => (
+  <div className="relative z-10 mt-10 h-24 sm:mt-12 sm:h-28">
+    <div className="glass absolute left-1/2 top-1/2 w-[120vw] -translate-x-1/2 -translate-y-1/2 rotate-[2.2deg] py-2">
+      <Marquee reverse className="p-0 [--duration:36s] [--gap:2rem]" repeat={4}>
+        {TAPE.map((t) => (
+          <span key={t} className="flex items-center gap-8 whitespace-nowrap font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground sm:text-sm">
+            {t}
+            <span className="text-brand-2">✦</span>
+          </span>
+        ))}
+      </Marquee>
+    </div>
+    <div className="bg-candy absolute left-1/2 top-1/2 w-[120vw] -translate-x-1/2 -translate-y-1/2 -rotate-[2.2deg] py-2.5 shadow-[0_20px_50px_-20px_hsl(var(--brand-1)/0.7)] sm:py-3">
+      <Marquee pauseOnHover className="p-0 [--duration:30s] [--gap:2rem]" repeat={4}>
+        {STACK.map((tech) => (
+          <span key={tech.name} className="flex items-center gap-2.5 whitespace-nowrap font-display text-lg font-bold uppercase sm:text-xl">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white p-1 shadow-sm">
+              <img src={tech.icon} alt="" className="h-full w-full object-contain" loading="lazy" />
+            </span>
+            {tech.name}
+            <span className="ml-5 opacity-60">✦</span>
+          </span>
+        ))}
+      </Marquee>
+    </div>
+  </div>
+);
+
+// ── Hero ───────────────────────────────────────────────────────────────────
+
 const Hero = () => {
   const [showResume, setShowResume] = useState(false);
   const [inView, setInView] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
-  const surfaceRef = useRef<HTMLDivElement>(null);
   const role = useTypewriter(ROLES);
-  const isMobile = useIsMobile();
-  // Pull the camera back on desktop so the scene sits comfortably beside the copy
-  const distanceFor = (w: number) => (w >= 1280 ? 9 : w >= 1024 ? 10.5 : undefined);
-  const [sceneDistance, setSceneDistance] = useState(() => distanceFor(window.innerWidth));
-  useEffect(() => {
-    const update = () => setSceneDistance(distanceFor(window.innerWidth));
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
+  const desktop = useMediaQuery("(min-width: 1024px)");
   const { colors } = useTheme();
   const reduceMotion = useReducedMotion();
 
-  // Once the whole hero has been seen, the card tips back and fades as it scrolls away
-  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["end end", "end start"] });
-  const progress = useSpring(scrollYProgress, { stiffness: 80, damping: 20, mass: 0.4 });
-  const cardRotateX = useTransform(progress, [0, 1], [0, 16]);
-  const cardScale = useTransform(progress, [0, 1], [1, 0.92]);
-  const cardOpacity = useTransform(progress, [0, 1], [1, 0.4]);
-  const cardY = useTransform(progress, [0, 1], [0, 60]);
+  // The copy drifts up and fades as the hero scrolls away (the 3D keys scatter on their own)
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end start"] });
+  const copyY = useTransform(scrollYProgress, [0, 1], [0, -120]);
+  const copyOpacity = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
 
   useEffect(() => {
     if (!sectionRef.current) return;
-    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), {
-      threshold: 0.05,
-    });
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: 0.02 });
     observer.observe(sectionRef.current);
     return () => observer.disconnect();
   }, []);
 
-  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    const el = surfaceRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    el.style.setProperty("--mx", `${e.clientX - rect.left}px`);
-    el.style.setProperty("--my", `${e.clientY - rect.top}px`);
-  };
-
-  let letterIndex = 0;
-
   return (
-    <section ref={sectionRef} id="home" className="relative pb-12 pt-24 lg:pb-16 lg:pt-28">
-      <div className="container">
+    <section ref={sectionRef} id="home" className="relative flex min-h-[100svh] flex-col overflow-hidden pt-20 sm:pt-24">
+      {/* Soft spotlight behind the name */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[46%] h-[34rem] w-[min(64rem,120vw)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-1/[0.12] blur-3xl"
+      />
+
+      {/* 3D keycaps: a band above the copy on phones/tablets, all around it on desktop */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[21rem] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent)] [mask-image:linear-gradient(to_bottom,black_70%,transparent)] sm:h-[25rem] lg:inset-0 lg:h-auto lg:[-webkit-mask-image:none] lg:[mask-image:none]"
+      >
+        <SceneBoundary>
+          <Suspense fallback={null}>
+            <HeroScene key={desktop ? "wide" : "compact"} active={inView} compact={!desktop} colors={colors} />
+          </Suspense>
+        </SceneBoundary>
+      </div>
+
+      <motion.div
+        style={reduceMotion ? undefined : { y: copyY, opacity: copyOpacity }}
+        className="container relative z-10 flex flex-1 flex-col items-center justify-start pt-[12.5rem] text-center sm:pt-[16.5rem] lg:justify-center lg:pt-6"
+      >
         <motion.div
-          style={
-            reduceMotion
-              ? undefined
-              : { rotateX: cardRotateX, scale: cardScale, opacity: cardOpacity, y: cardY, transformPerspective: 1400 }
-          }
-          className="origin-top"
+          initial={reduceMotion ? false : { opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: NAME_DELAY - 0.2, type: "spring", stiffness: 160, damping: 18 }}
+          className="mb-4 flex flex-wrap items-center justify-center gap-2 sm:mb-6"
         >
+          <span className="chip px-3.5 py-1.5 text-xs text-foreground sm:text-sm">
+            <span className="inline-block origin-[70%_70%] animate-wiggle [animation-delay:1.6s] [animation-iteration-count:3]">
+              👋
+            </span>
+            Hey there, I&apos;m
+          </span>
+          <span className="chip px-3.5 py-1.5 text-xs text-brand-4 sm:text-sm">
+            <PulseDot />
+            Available for work
+          </span>
+        </motion.div>
+
+        <Name />
+
+        <motion.div variants={container} initial={reduceMotion ? false : "hidden"} animate="show" className="flex w-full flex-col items-center">
           <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 60, rotateX: -18, scale: 0.94, filter: "blur(10px)" }}
-            animate={{ opacity: 1, y: 0, rotateX: 0, scale: 1, filter: "blur(0px)", transitionEnd: { filter: "none" } }}
-            transition={{ type: "spring", stiffness: 90, damping: 18, delay: 0.1 }}
-            style={{ transformPerspective: 1400 }}
+            variants={item}
+            className="glass mt-6 inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 font-mono text-sm sm:mt-8 sm:px-5 sm:text-base"
           >
-            <TiltCard max={3}>
-              <div
-                ref={surfaceRef}
-                onPointerMove={onPointerMove}
-                className="gradient-border group/hero relative flex flex-col overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] lg:min-h-[calc(100svh-9rem)]"
-              >
-                {/* Surface: glass, grid, glow blobs, cursor spotlight */}
-                <div aria-hidden className="glass absolute inset-0" />
-                <div aria-hidden className="grid-bg absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_top_left,black,transparent_70%)]" />
-                <div aria-hidden className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-brand-1/20 blur-3xl" />
-                <div aria-hidden className="absolute -bottom-32 left-1/3 h-80 w-96 rounded-full bg-brand-3/15 blur-3xl" />
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/hero:opacity-100"
-                  style={{
-                    background:
-                      "radial-gradient(520px circle at var(--mx, 50%) var(--my, 50%), hsl(var(--brand-1) / 0.14), transparent 45%)",
-                  }}
-                />
+            <span className="text-brand-2">$</span>
+            <span className="text-muted-foreground">whoami</span>
+            <span className="text-brand-1">→</span>
+            <span className="min-w-[20ch] text-left text-foreground">
+              {role}
+              <span className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[0.2em] animate-blink bg-brand-1" />
+            </span>
+          </motion.div>
 
-                {/* 3D scene — a faded banner on top for mobile, blended into the right half on desktop */}
-                <div
-                  className="relative h-60 w-full [-webkit-mask-image:linear-gradient(to_bottom,black_60%,transparent)] [mask-image:linear-gradient(to_bottom,black_60%,transparent)] sm:h-72 lg:absolute lg:inset-y-0 lg:right-0 lg:h-auto lg:w-[52%] lg:[-webkit-mask-image:linear-gradient(to_right,transparent,black_30%)] lg:[mask-image:linear-gradient(to_right,transparent,black_30%)]"
+          <motion.p
+            variants={item}
+            className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:mt-6 sm:text-lg"
+          >
+            Passionate full-stack developer with expertise in React and React Native, dedicated to creating innovative
+            web and mobile solutions. Committed to continuous learning and delivering high-quality, user-centric
+            applications.
+          </motion.p>
+
+          <motion.div variants={item} className="mt-7 flex w-full flex-col items-center gap-3 sm:mt-8 sm:w-auto sm:flex-row">
+            <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto">
+              <Magnetic className="w-full sm:w-auto" strength={0.25}>
+                <motion.button
+                  type="button"
+                  onClick={() => setShowResume(true)}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-candy group relative flex w-full animate-gradient-x items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 py-3.5 font-display text-base font-bold shadow-glow-1 sm:px-7 sm:py-4"
                 >
-                  <SceneBoundary>
-                    <Suspense fallback={<SceneFallback />}>
-                      <HeroScene key={sceneDistance ?? "auto"} active={inView} compact={isMobile} distance={sceneDistance} colors={colors} />
-                    </Suspense>
-                  </SceneBoundary>
-                </div>
-
-                {/* Copy */}
-                <motion.div
-                  variants={container}
-                  initial={reduceMotion ? false : "hidden"}
-                  animate="show"
-                  className="relative z-10 -mt-10 flex flex-1 flex-col justify-center px-6 pb-8 sm:-mt-12 sm:px-10 lg:mt-0 lg:max-w-[56%] lg:py-14 lg:pl-14 xl:pl-16"
+                  <FileText className="h-5 w-5 transition-transform group-hover:-rotate-12" />
+                  Resume
+                  <Sparkles className="hidden h-4 w-4 transition-transform group-hover:rotate-45 group-hover:scale-125 sm:block" />
+                </motion.button>
+              </Magnetic>
+              <Magnetic className="w-full sm:w-auto" strength={0.25}>
+                <a
+                  href="#contact"
+                  className="group flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border bg-background/60 px-5 py-3.5 font-display text-base font-bold backdrop-blur transition-colors hover:border-brand-1 hover:text-brand-1 sm:px-7 sm:py-4"
                 >
-                  <motion.div variants={item} className="mb-5 flex flex-wrap items-center gap-2">
-                    <span className="chip px-3.5 py-1.5 text-xs text-foreground sm:text-sm">
-                      <span className="inline-block origin-[70%_70%] animate-wiggle [animation-delay:1.2s] [animation-iteration-count:3]">
-                        👋
-                      </span>
-                      Hey there, I&apos;m
-                    </span>
-                    <span className="chip px-3.5 py-1.5 text-xs text-brand-4 sm:text-sm">
-                      <PulseDot />
-                      Available for work
-                    </span>
-                  </motion.div>
-
-                  <h1
-                    aria-label="Nikhil Ranga"
-                    className="mb-5 font-display text-[calc(clamp(3.4rem,17vw,5.5rem)*var(--display-scale,1))] font-extrabold leading-[1.02] tracking-[var(--display-tracking,-0.03em)] lg:whitespace-nowrap lg:text-[calc(clamp(4rem,6.2vw,6.25rem)*var(--display-scale,1))]"
-                  >
-                    <span aria-hidden className="block text-foreground lg:inline">
-                      {NAME[0].split("").map((char) => {
-                        const i = letterIndex++;
-                        return <NameLetter key={i} char={char} index={i} />;
-                      })}
-                    </span>
-                    <span aria-hidden className="relative inline-block lg:ml-[0.22em]">
-                      {/* padding keeps the gradient painting area below the descender of "g" */}
-                      <span className="text-gradient inline-block pb-[0.16em] -mb-[0.16em]">
-                        {NAME[1].split("").map((char) => {
-                          const i = letterIndex++;
-                          return <NameLetter key={i} char={char} index={i} />;
-                        })}
-                      </span>
-                      {/* soft light sweeping across the gradient word */}
-                      <motion.span
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 1.3 }}
-                        className="pointer-events-none absolute inset-0 animate-shine bg-[linear-gradient(110deg,transparent_38%,rgba(255,255,255,0.8)_50%,transparent_62%)] bg-[length:250%_100%] bg-clip-text pb-[0.16em] text-transparent"
-                      >
-                        {NAME[1]}
-                      </motion.span>
-                      {/* hand-drawn underline that draws itself */}
-                      <svg
-                        viewBox="0 0 300 24"
-                        preserveAspectRatio="none"
-                        className="pointer-events-none absolute -bottom-[0.14em] left-[2%] h-[0.22em] w-[96%] overflow-visible"
-                      >
-                        <defs>
-                          <linearGradient id="name-underline" x1="0" x2="1" y1="0" y2="0">
-                            <stop offset="0%" stopColor="hsl(var(--brand-3))" />
-                            <stop offset="100%" stopColor="hsl(var(--brand-1))" />
-                          </linearGradient>
-                        </defs>
-                        <motion.path
-                          d="M4 15 C 55 5, 105 21, 160 11 S 255 5, 296 13"
-                          fill="none"
-                          stroke="url(#name-underline)"
-                          strokeWidth="6"
-                          strokeLinecap="round"
-                          initial={{ pathLength: 0, opacity: 0 }}
-                          animate={{ pathLength: 1, opacity: 1 }}
-                          transition={{ delay: 1.05, duration: 0.9, ease: [0.65, 0, 0.35, 1] }}
-                        />
-                      </svg>
-                    </span>
-                  </h1>
-
-                  <motion.p variants={item} className="mb-5 min-h-[1.75em] font-mono text-base font-medium sm:text-xl lg:text-2xl">
-                    <span className="text-brand-2">&gt;</span> <span className="text-foreground">{role}</span>
-                    <span className="ml-0.5 inline-block h-[1.1em] w-[3px] translate-y-1 animate-pulse bg-brand-1" />
-                  </motion.p>
-
-                  <motion.p
-                    variants={item}
-                    className="mb-8 w-full text-base leading-relaxed text-muted-foreground sm:text-lg lg:text-xl lg:leading-relaxed"
-                  >
-                    Passionate full-stack developer with expertise in React and React Native, dedicated to creating
-                    innovative web and mobile solutions. Committed to continuous learning and delivering high-quality,
-                    user-centric applications.
-                  </motion.p>
-
-                  <motion.div variants={item} className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <Magnetic className="w-full sm:w-auto" strength={0.25}>
-                      <motion.button
-                        type="button"
-                        onClick={() => setShowResume(true)}
-                        whileTap={{ scale: 0.95 }}
-                        className="bg-candy group relative flex w-full animate-gradient-x items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-7 py-4 font-display text-base font-bold text-on-grad shadow-glow-1 sm:w-auto sm:rounded-full"
-                      >
-                        <FileText className="h-5 w-5 transition-transform group-hover:-rotate-12" />
-                        View Resume
-                        <Sparkles className="h-4 w-4 transition-transform group-hover:rotate-45 group-hover:scale-125" />
-                      </motion.button>
-                    </Magnetic>
-                    <div className="grid grid-cols-3 gap-3 sm:flex">
-                      {SOCIALS.map(({ href, label, icon: Icon }) => (
-                        <motion.a
-                          key={label}
-                          href={href}
-                          target={href.startsWith("http") ? "_blank" : undefined}
-                          rel="noopener noreferrer"
-                          aria-label={label}
-                          whileHover={{ y: -4, rotate: -6 }}
-                          whileTap={{ scale: 0.9 }}
-                          className="flex h-12 items-center justify-center rounded-2xl border border-border bg-background/50 text-foreground transition-colors hover:border-brand-1 hover:text-brand-1 hover:shadow-glow-1 sm:h-14 sm:w-14"
-                        >
-                          <Icon className="h-5 w-5" />
-                        </motion.a>
-                      ))}
-                    </div>
-                  </motion.div>
-                </motion.div>
-
-                {/* Footer strip — current role, stats and stack, all inside the same card */}
-                <motion.div
-                  initial={reduceMotion ? false : { opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.3, duration: 0.6 }}
-                  className="relative z-10 grid gap-5 border-t border-border/60 bg-background/30 px-6 py-5 backdrop-blur-sm sm:px-10 lg:grid-cols-[auto_auto_minmax(0,1fr)] lg:items-center lg:gap-8 lg:pl-14 xl:pl-16"
+                  Let&apos;s talk
+                  <ArrowDownRight className="h-5 w-5 transition-transform group-hover:rotate-[-45deg]" />
+                </a>
+              </Magnetic>
+            </div>
+            <div className="flex gap-3">
+              {SOCIALS.map(({ href, label, icon: Icon }) => (
+                <motion.a
+                  key={label}
+                  href={href}
+                  target={href.startsWith("http") ? "_blank" : undefined}
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  whileHover={{ y: -4, rotate: -6 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-background/60 text-foreground backdrop-blur transition-colors hover:border-brand-1 hover:text-brand-1 hover:shadow-glow-1 sm:h-14 sm:w-14"
                 >
-                  <div className="flex items-center gap-3">
-                    <PulseDot />
-                    <div className="min-w-0">
-                      <p className="font-mono text-[0.65rem] uppercase tracking-widest text-muted-foreground">Currently</p>
-                      <p className="text-sm font-semibold leading-tight">
-                        Full Stack Developer Intern <span className="text-brand-1">@ SimplifyTech In</span>
-                      </p>
-                    </div>
-                  </div>
+                  <Icon className="h-5 w-5" />
+                </motion.a>
+              ))}
+            </div>
+          </motion.div>
 
-                  <div className="grid grid-cols-2 gap-4 lg:flex lg:gap-8 lg:border-x lg:border-border/60 lg:px-8">
-                    <div>
-                      <p className="text-gradient font-display text-3xl font-extrabold leading-none">
-                        <CountUp to={11} delay={1.4} />
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">Projects shipped</p>
-                    </div>
-                    <div>
-                      <p className="text-gradient font-display text-3xl font-extrabold leading-none">
-                        <CountUp to={20} suffix="+" delay={1.6} />
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">Technologies</p>
-                    </div>
-                  </div>
-
-                  <div className="relative min-w-0 overflow-hidden [-webkit-mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)] [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
-                    <Marquee pauseOnHover className="p-0 [--duration:28s] [--gap:0.75rem]" repeat={3}>
-                      {STACK.map((tech) => (
-                        <span
-                          key={tech.name}
-                          className="flex items-center gap-2 whitespace-nowrap rounded-full border border-border bg-background/60 py-1.5 pl-1.5 pr-3.5 text-xs font-medium"
-                        >
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white p-1">
-                            <img src={tech.icon} alt="" className="h-full w-full object-contain" loading="lazy" />
-                          </span>
-                          {tech.name}
-                        </span>
-                      ))}
-                    </Marquee>
-                  </div>
-                </motion.div>
-              </div>
-            </TiltCard>
+          <motion.div variants={item} className="mt-9 flex flex-wrap justify-center gap-3 sm:mt-10 sm:gap-4">
+            <StatKey label="projects shipped">
+              <span className="text-gradient">
+                <CountUp to={11} delay={NAME_DELAY + 1.2} />
+              </span>
+            </StatKey>
+            <StatKey label="technologies">
+              <span className="text-gradient">
+                <CountUp to={20} suffix="+" delay={NAME_DELAY + 1.35} />
+              </span>
+            </StatKey>
+            <StatKey label="full stack intern" className="basis-full text-center sm:basis-auto sm:text-left">
+              <span className="flex items-center justify-center gap-2 sm:justify-start">
+                <PulseDot />
+                @ SimplifyTech In
+              </span>
+            </StatKey>
           </motion.div>
         </motion.div>
-      </div>
+      </motion.div>
+
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: NAME_DELAY + 1.1, type: "spring", stiffness: 80, damping: 18 }}
+      >
+        <Tapes />
+      </motion.div>
 
       <Dialog open={showResume} onOpenChange={setShowResume}>
         <DialogContent

@@ -97,8 +97,13 @@ export default {
         "scroll-dot": "scroll-dot 1.8s ease-in-out infinite",
         tumble: "tumble 18s linear infinite",
         shine: "shine 5s ease-in-out infinite",
+        blink: "blink 1.05s step-end infinite",
       },
       keyframes: {
+        blink: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0" },
+        },
         "accordion-down": {
           from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },

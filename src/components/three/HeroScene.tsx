@@ -1,410 +1,387 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Center, Environment, Float, Lightformer, RoundedBox, Sparkles, Text3D } from "@react-three/drei";
+import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Environment, Lightformer, RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import type { PaletteColors } from "@/lib/palettes";
-import { useTint } from "./useTint";
 
-const FONT_URL = "/fonts/helvetiker_bold.typeface.json";
+type Tone = "c1" | "c2" | "c3" | "c4" | "c5" | "neutral";
 
-// ── Live code on the laptop screen ─────────────────────────────────────────
-
-type TokenKind = "kw" | "var" | "key" | "str" | "bool" | "punc";
-type Line = [TokenKind, string][];
-
-const CODE: Line[] = [
-  [["kw", "const "], ["var", "developer"], ["punc", " = {"]],
-  [["punc", "  "], ["key", "name"], ["punc", ": "], ["str", '"Nikhil Ranga"'], ["punc", ","]],
-  [["punc", "  "], ["key", "role"], ["punc", ": "], ["str", '"Full Stack Developer"'], ["punc", ","]],
-  [["punc", "  "], ["key", "stack"], ["punc", ": ["], ["str", '"React"'], ["punc", ", "], ["str", '"TypeScript"'], ["punc", ","]],
-  [["punc", "          "], ["str", '"Node.js"'], ["punc", ", "], ["str", '"Python"'], ["punc", "],"]],
-  [["punc", "  "], ["key", "now"], ["punc", ": "], ["str", '"SimplifyTech In"'], ["punc", ","]],
-  [["punc", "  "], ["key", "available"], ["punc", ": "], ["bool", "true"], ["punc", ","]],
-  [["punc", "};"]],
-  [],
-  [["kw", "export default "], ["var", "developer"], ["punc", ";"]],
-];
-const TOTAL_CHARS = CODE.reduce((n, line) => n + line.reduce((m, [, t]) => m + t.length, 0) + 1, 0);
-
-const W = 1024;
-const H = 640;
-const FONT = '600 34px "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace';
-
-function drawEditor(ctx: CanvasRenderingContext2D, colors: PaletteColors, shown: number, blink: boolean) {
-  const palette: Record<TokenKind, string> = {
-    kw: colors.c2,
-    var: colors.c1,
-    key: colors.c3,
-    str: colors.c4,
-    bool: colors.c5,
-    punc: "#c9d1e0",
-  };
-
-  // Window
-  ctx.fillStyle = "#0e1530";
-  ctx.fillRect(0, 0, W, H);
-  // Title bar with traffic lights and a tab
-  ctx.fillStyle = "#111831";
-  ctx.fillRect(0, 0, W, 64);
-  ["#ff5f57", "#febc2e", "#28c840"].forEach((c, i) => {
-    ctx.fillStyle = c;
-    ctx.beginPath();
-    ctx.arc(34 + i * 30, 32, 9, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.fillStyle = "#0b1020";
-  ctx.fillRect(140, 14, 230, 50);
-  ctx.fillStyle = colors.c1;
-  ctx.fillRect(140, 14, 230, 4);
-  ctx.font = '22px "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace';
-  ctx.fillStyle = "#e6ebf5";
-  ctx.fillText("developer.tsx", 164, 48);
-
-  // Code with line numbers, typed out up to `shown` characters
-  ctx.font = FONT;
-  const lineHeight = 48;
-  const top = 112;
-  let remaining = shown;
-  let cursor: [number, number] | null = null;
-  CODE.forEach((line, row) => {
-    const y = top + row * lineHeight;
-    ctx.fillStyle = "#3b4663";
-    ctx.fillText(String(row + 1).padStart(2, " "), 22, y);
-    let x = 96;
-    for (const [kind, text] of line) {
-      if (remaining <= 0) break;
-      const part = text.slice(0, remaining);
-      ctx.fillStyle = palette[kind];
-      ctx.fillText(part, x, y);
-      x += ctx.measureText(part).width;
-      remaining -= part.length;
-    }
-    if (remaining > 0) remaining -= 1; // newline
-    else if (!cursor) cursor = [x, y];
-  });
-  if (!cursor) cursor = [96, top + (CODE.length - 1) * lineHeight];
-  if (blink) {
-    ctx.fillStyle = colors.c1;
-    ctx.fillRect(cursor[0] + 2, cursor[1] - 30, 16, 38);
-  }
-
-  // Status bar
-  ctx.fillStyle = colors.c1;
-  ctx.fillRect(0, H - 40, W, 40);
-  ctx.font = '20px "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace';
-  ctx.fillStyle = "#0b1020";
-  ctx.fillText("● main   TypeScript React   UTF-8", 24, H - 13);
+interface KeySpec {
+  label: string;
+  tone: Tone;
+  /** Position as a fraction of the visible half-width / half-height */
+  fx: number;
+  fy: number;
+  z: number;
+  scale: number;
+  /** Width in key units (1 = square key) */
+  width?: number;
+  /** Resting rotation: x tips the top face toward the camera */
+  rot: [number, number, number];
 }
 
-/** A canvas texture of a code editor that types itself out, loops, and follows the palette. */
-function useCodeTexture(colors: PaletteColors, active: boolean) {
+// Positions are where the key lands on screen (fractions of the half-width / half-height),
+// whatever its depth. Desktop: around the edges and corners, clear of the name and copy.
+const WIDE: KeySpec[] = [
+  { label: "N", tone: "c1", fx: -0.87, fy: 0.6, z: -0.4, scale: 1.0, rot: [0.95, 0.35, 0.2] },
+  { label: "esc", tone: "neutral", fx: -0.5, fy: 0.75, z: -1.8, scale: 0.6, rot: [1.05, -0.25, -0.18] },
+  { label: "R", tone: "c2", fx: 0.87, fy: 0.58, z: -0.3, scale: 0.98, rot: [0.9, -0.4, -0.22] },
+  { label: "</>", tone: "neutral", fx: 0.49, fy: 0.75, z: -2, scale: 0.62, rot: [1.1, 0.3, 0.15] },
+  { label: "{ }", tone: "c3", fx: -0.79, fy: -0.28, z: 0.5, scale: 0.88, rot: [0.75, 0.45, -0.12] },
+  { label: "enter", tone: "c4", fx: -0.58, fy: -0.64, z: -0.5, scale: 0.74, width: 1.9, rot: [0.95, 0.25, -0.1] },
+  { label: "TS", tone: "c5", fx: 0.8, fy: -0.22, z: 0.6, scale: 0.84, rot: [0.8, -0.5, 0.14] },
+  { label: "JS", tone: "neutral", fx: 0.6, fy: -0.6, z: -0.8, scale: 0.68, rot: [1.0, -0.2, 0.25] },
+  { label: "fn", tone: "neutral", fx: -0.94, fy: 0.04, z: -2.6, scale: 0.6, rot: [1.0, 0.6, 0.3] },
+  { label: "git", tone: "neutral", fx: 0.94, fy: 0.1, z: -2.6, scale: 0.6, rot: [1.0, -0.6, -0.3] },
+];
+
+// Phones/tablets: a band of keys above the name
+const COMPACT: KeySpec[] = [
+  { label: "N", tone: "c1", fx: -0.6, fy: 0.02, z: 0, scale: 1, rot: [0.95, 0.4, 0.2] },
+  { label: "</>", tone: "neutral", fx: 0.02, fy: 0.27, z: -1.2, scale: 0.72, rot: [1.05, -0.2, -0.1] },
+  { label: "R", tone: "c2", fx: 0.61, fy: 0.0, z: 0.1, scale: 1, rot: [0.9, -0.45, -0.22] },
+  { label: "{ }", tone: "c3", fx: -0.19, fy: -0.52, z: 0.5, scale: 0.7, rot: [0.8, 0.3, -0.15] },
+  { label: "enter", tone: "c4", fx: 0.31, fy: -0.51, z: 0.2, scale: 0.6, width: 1.9, rot: [0.95, -0.2, 0.12] },
+  { label: "JS", tone: "neutral", fx: -0.8, fy: 0.34, z: -1.6, scale: 0.62, rot: [1.0, 0.5, 0.3] },
+  { label: "TS", tone: "c5", fx: 0.8, fy: 0.34, z: -1.6, scale: 0.62, rot: [1.0, -0.5, -0.3] },
+];
+
+const DEPTH = 0.56;
+const WIDE_Z = 10;
+const COMPACT_Z = 6.5;
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+const luminance = (hex: string) => {
+  const c = new THREE.Color(hex);
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+};
+
+function keyColors(tone: Tone, colors: PaletteColors) {
+  const dark = luminance(colors.background) < 0.4;
+  if (tone === "neutral") {
+    const face = new THREE.Color(colors.background).lerp(new THREE.Color(colors.foreground), dark ? 0.13 : 0.05);
+    return { face: `#${face.getHexString()}`, label: colors.foreground, accent: colors.c1 };
+  }
+  const face = colors[tone];
+  const label = luminance(face) > 0.42 ? (dark ? colors.background : "#0b1220") : "#ffffff";
+  return { face, label, accent: null };
+}
+
+function displayFont() {
+  const family = getComputedStyle(document.documentElement).getPropertyValue("--font-display").trim();
+  return family || "system-ui, sans-serif";
+}
+
+/** Canvas texture with the key's legend, drawn in the active theme's display font. */
+function useLabelTexture(label: string, width: number, color: string, accent: string | null) {
   const { canvas, texture } = useMemo(() => {
     const canvas = document.createElement("canvas");
-    canvas.width = W;
-    canvas.height = H;
+    canvas.height = 256;
+    canvas.width = Math.round(256 * ((width - 0.3) / 0.62));
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 4;
+    texture.anisotropy = 8;
     return { canvas, texture };
-  }, []);
-  const state = useRef({ typed: 0, shown: -1, hold: 0, blink: true });
-  const colorsRef = useRef(colors);
-  colorsRef.current = colors;
+  }, [width]);
 
-  const redraw = (blink = true) => {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    drawEditor(ctx, colorsRef.current, Math.max(0, state.current.shown), blink);
-    texture.needsUpdate = true;
-  };
-
-  // Redraw when the palette changes and once the monospace web font is ready
   useEffect(() => {
-    redraw();
-    document.fonts?.load(FONT).then(() => redraw()).catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [colors]);
+    const draw = () => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const size = label.length === 1 ? 150 : label.length <= 3 ? 104 : 82;
+      const font = `700 ${size}px ${displayFont()}`;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = font;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = color;
+      ctx.fillText(label, canvas.width / 2, canvas.height / 2 + 6);
+      if (accent) {
+        // Small accent bar, like a home-row bump
+        ctx.fillStyle = accent;
+        ctx.fillRect(canvas.width / 2 - 22, canvas.height - 42, 44, 9);
+      }
+      texture.needsUpdate = true;
+      return font;
+    };
+    const font = draw();
+    if (font) document.fonts?.load(font).then(() => draw()).catch(() => undefined);
+  }, [canvas, texture, label, color, accent]);
 
   useEffect(() => () => texture.dispose(), [texture]);
-
-  // Time-based typing so the speed is the same at any frame rate
-  useFrame((_, delta) => {
-    if (!active) return;
-    const s = state.current;
-    if (s.typed < TOTAL_CHARS) {
-      s.typed = Math.min(TOTAL_CHARS, s.typed + delta * 38);
-    } else {
-      s.hold += delta;
-      if (s.hold > 3.5) {
-        s.hold = 0;
-        s.typed = 0;
-      }
-    }
-    const shown = Math.floor(s.typed);
-    const blink = Math.floor(performance.now() / 450) % 2 === 0;
-    if (shown !== s.shown || blink !== s.blink) {
-      s.shown = shown;
-      s.blink = blink;
-      redraw(blink);
-    }
-  });
-
   return texture;
 }
 
-/** Subtle keyboard pattern for the laptop deck. */
-function useKeyboardTexture() {
-  return useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 200;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.fillStyle = "#12161f";
-      ctx.fillRect(0, 0, 512, 200);
-      const cols = 14;
-      const rows = 5;
-      const gap = 6;
-      const kw = (512 - gap * (cols + 1)) / cols;
-      const kh = (200 - gap * (rows + 1)) / rows;
-      ctx.fillStyle = "#262c3a";
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          // Space bar spans six keys on the bottom row
-          if (r === rows - 1 && c > 4 && c <= 9) continue;
-          const w = r === rows - 1 && c === 4 ? kw * 6 + gap * 5 : kw;
-          ctx.fillRect(gap + c * (kw + gap), gap + r * (kh + gap), w, kh);
-        }
+// ── Pointer handling (window-level, so keys react even under the hero text) ───
+
+interface PointerState {
+  ndc: THREE.Vector2;
+  inside: boolean;
+  /** Set on tap/click; consumed by the raycaster on the next frame */
+  tap: THREE.Vector2 | null;
+}
+
+interface KeyHandle {
+  meshes: THREE.Object3D[];
+  bump: () => void;
+}
+
+// ── A single keycap ────────────────────────────────────────────────────────
+
+interface KeycapProps {
+  spec: KeySpec;
+  index: number;
+  compact: boolean;
+  colors: PaletteColors;
+  hovered: MutableRefObject<number>;
+  register: (index: number, handle: KeyHandle) => void;
+  pointer: MutableRefObject<PointerState>;
+}
+
+function Keycap({ spec, index, compact, colors, hovered, register, pointer }: KeycapProps) {
+  const width = spec.width ?? 1;
+  const viewport = useThree((s) => s.viewport);
+  // Push deeper keys outward so they still land at (fx, fy) on screen
+  const cameraZ = compact ? COMPACT_Z : WIDE_Z;
+  const spread = (cameraZ - spec.z) / cameraZ;
+  const { face, label, accent } = keyColors(spec.tone, colors);
+  // One material for both parts of the cap, eased to the new colour when the palette changes
+  const material = useMemo(
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        color: face,
+        roughness: 0.32,
+        metalness: 0.05,
+        clearcoat: 1,
+        clearcoatRoughness: 0.25,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  const faceColor = useMemo(() => new THREE.Color(face), [face]);
+  useEffect(() => () => material.dispose(), [material]);
+  const labelTexture = useLabelTexture(spec.label, width, label, accent);
+
+  const root = useRef<THREE.Group>(null);
+  const tilt = useRef<THREE.Group>(null);
+  const spin = useRef<THREE.Group>(null);
+  const press = useRef<THREE.Group>(null);
+  const top = useRef<THREE.Group>(null);
+  const lower = useRef<THREE.Mesh>(null);
+  const upper = useRef<THREE.Mesh>(null);
+
+  // Drop-in spring and interaction state
+  const sim = useRef({
+    born: performance.now() + (compact ? 250 : 450) + index * 90,
+    drop: 7,
+    vel: 0,
+    press: 0,
+    spin: 0,
+    spinTarget: 0,
+    phase: index * 1.7,
+  });
+
+  useEffect(() => {
+    register(index, {
+      meshes: [lower.current, upper.current].filter(Boolean) as THREE.Object3D[],
+      bump: () => {
+        sim.current.spinTarget += Math.PI * 2;
+        sim.current.vel += 5;
+      },
+    });
+  }, [index, register]);
+
+  useFrame((state, rawDelta) => {
+    const s = sim.current;
+    // Frame-rate independent: big gaps between frames are integrated in small steps
+    const delta = Math.min(rawDelta, 1.5);
+    const t = state.clock.elapsedTime;
+    material.color.lerp(faceColor, 1 - Math.exp(-4 * delta));
+    if (!root.current || !tilt.current || !spin.current || !press.current || !top.current) return;
+
+    // Drop in from above with a bouncy spring once this key's turn comes
+    if (performance.now() >= s.born) {
+      for (let left = delta; left > 0; left -= 1 / 120) {
+        const h = Math.min(left, 1 / 120);
+        s.vel += (-70 * s.drop - 9 * s.vel) * h;
+        s.drop += s.vel * h;
       }
     }
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    return texture;
-  }, []);
-}
 
-/** Soft radial glow texture used under the laptop. */
-function useGlowTexture() {
-  return useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 256;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
-      g.addColorStop(0, "rgba(255,255,255,0.9)");
-      g.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, 256, 256);
-    }
-    return new THREE.CanvasTexture(canvas);
-  }, []);
-}
+    // Scatter outward as the hero scrolls away
+    const scroll = Math.min(window.scrollY / (window.innerHeight * 0.9), 1.3);
+    const outward = Math.sign(spec.fx || 1);
 
-// ── Scene pieces ───────────────────────────────────────────────────────────
+    const ptr = pointer.current.ndc;
+    const depthFactor = 1 + spec.z * 0.18;
+    const x = spec.fx * (viewport.width / 2) * spread + ptr.x * 0.18 * depthFactor + outward * scroll * 2.4;
+    const y =
+      spec.fy * (viewport.height / 2) * spread + Math.sin(t * 0.9 + s.phase) * 0.09 + ptr.y * 0.12 * depthFactor + scroll * 1.6 + s.drop;
+    root.current.position.set(x, y, spec.z);
 
-function Laptop({ colors, active, compact }: { colors: PaletteColors; active: boolean; compact: boolean }) {
-  const group = useRef<THREE.Group>(null);
-  const screen = useCodeTexture(colors, active);
-  const keys = useKeyboardTexture();
-  const glow = useGlowTexture();
-  const glowTint = useTint<THREE.MeshBasicMaterial>(colors.c1);
-  const baseYaw = compact ? -0.2 : -0.42;
+    // Gentle wobble, a lean toward the pointer, and a twirl while falling
+    tilt.current.rotation.set(
+      spec.rot[0] + Math.sin(t * 0.7 + s.phase) * 0.07 - ptr.y * 0.15 + scroll * 0.8,
+      spec.rot[1] + Math.sin(t * 0.5 + s.phase) * 0.1 + ptr.x * 0.25,
+      spec.rot[2] + s.drop * 0.12 + outward * scroll * 0.6
+    );
 
-  useFrame((state, delta) => {
-    if (!group.current) return;
-    const { pointer, clock } = state;
-    group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, baseYaw + pointer.x * 0.25, 3, delta);
-    group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, 0.22 - pointer.y * 0.1, 3, delta);
-    group.current.position.y = -0.75 + Math.sin(clock.elapsedTime * 1.1) * 0.06;
+    // Hover presses the key down; a tap makes it hop and twirl
+    const target = hovered.current === index ? 1 : 0;
+    s.press = THREE.MathUtils.damp(s.press, target, 16, delta);
+    s.spin = THREE.MathUtils.damp(s.spin, s.spinTarget, 5, delta);
+    top.current.position.y = -s.press * 0.13;
+    spin.current.rotation.y = s.spin;
   });
 
   return (
-    <group ref={group} rotation={[0.22, baseYaw, 0]} position={[0, -0.75, 0]}>
-      {/* Glow on the "desk" */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.09, 0.1]}>
-        <planeGeometry args={[6.5, 4.2]} />
-        <meshBasicMaterial
-          ref={glowTint.ref}
-          color={glowTint.initial}
-          map={glow}
-          transparent
-          opacity={0.45}
-          depthWrite={false}
-          toneMapped={false}
-        />
-      </mesh>
-
-      {/* Base */}
-      <RoundedBox args={[3.4, 0.12, 2.3]} radius={0.05} smoothness={4}>
-        <meshPhysicalMaterial color="#2a303d" metalness={0.75} roughness={0.28} clearcoat={0.6} />
-      </RoundedBox>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.062, -0.28]}>
-        <planeGeometry args={[3.0, 1.15]} />
-        <meshStandardMaterial map={keys} roughness={0.7} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.062, 0.72]}>
-        <planeGeometry args={[1.15, 0.6]} />
-        <meshStandardMaterial color="#343b4b" roughness={0.35} metalness={0.4} />
-      </mesh>
-
-      {/* Lid, hinged at the back edge and tilted open */}
-      <group position={[0, 0.06, -1.13]} rotation={[-0.26, 0, 0]}>
-        <RoundedBox args={[3.4, 2.2, 0.08]} radius={0.05} smoothness={4} position={[0, 1.1, 0]}>
-          <meshPhysicalMaterial color="#1c212c" metalness={0.8} roughness={0.25} clearcoat={0.8} />
-        </RoundedBox>
-        <mesh position={[0, 1.13, 0.045]}>
-          <planeGeometry args={[3.18, 1.99]} />
-          <meshBasicMaterial map={screen} toneMapped={false} />
-        </mesh>
-        <pointLight position={[0, 1.1, 1.2]} intensity={6} distance={5} color={colors.c3} />
+    <group ref={root} scale={spec.scale}>
+      <group ref={tilt} rotation={spec.rot}>
+        <group ref={spin}>
+          <group ref={press} position={[0, -DEPTH / 2, 0]}>
+            {/* Skirt */}
+            <RoundedBox
+              ref={lower}
+              args={[width, 0.34, 1]}
+              radius={0.1}
+              smoothness={4}
+              position={[0, 0.17, 0]}
+              material={material}
+            />
+            {/* Top, narrower like a sculpted keycap; sinks into the skirt when pressed */}
+            <group ref={top}>
+              <RoundedBox
+                ref={upper}
+                args={[width - 0.14, 0.24, 0.86]}
+                radius={0.1}
+                smoothness={4}
+                position={[0, 0.42, 0]}
+                material={material}
+              />
+              {/* Legend */}
+              <mesh position={[0, DEPTH - 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[width - 0.3, 0.62]} />
+                <meshBasicMaterial map={labelTexture} transparent toneMapped={false} depthWrite={false} />
+              </mesh>
+            </group>
+          </group>
+        </group>
       </group>
     </group>
   );
 }
 
-function Glyph({
-  text,
-  color,
-  position,
-  size = 0.42,
-  speed = 2,
-}: {
-  text: string;
-  color: string;
-  position: [number, number, number];
-  size?: number;
-  speed?: number;
-}) {
-  const tint = useTint<THREE.MeshPhysicalMaterial>(color);
-  return (
-    <Float speed={speed} rotationIntensity={1.1} floatIntensity={1.4}>
-      <group position={position}>
-        <Center>
-          <Text3D
-            font={FONT_URL}
-            size={size}
-            height={0.14}
-            curveSegments={6}
-            bevelEnabled
-            bevelSize={0.014}
-            bevelThickness={0.02}
-            bevelSegments={3}
-          >
-            {text}
-            <meshPhysicalMaterial
-              ref={tint.ref}
-              color={tint.initial}
-              roughness={0.18}
-              metalness={0.25}
-              clearcoat={1}
-              clearcoatRoughness={0.1}
-            />
-          </Text3D>
-        </Center>
-      </group>
-    </Float>
-  );
-}
+// ── Scene ──────────────────────────────────────────────────────────────────
 
-function ReactAtom({ color, position }: { color: string; position: [number, number, number] }) {
-  const group = useRef<THREE.Group>(null);
-  // One shared material for rings + core so the whole atom recolours together
-  const [material] = useState(
-    () => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1, toneMapped: false })
-  );
-  const target = useMemo(() => new THREE.Color(color), [color]);
-  useEffect(() => () => material.dispose(), [material]);
+function Keys({ compact, colors }: { compact: boolean; colors: PaletteColors }) {
+  const { camera, gl } = useThree();
+  const specs = compact ? COMPACT : WIDE;
+  const hovered = useRef(-1);
+  const handles = useRef(new Map<number, KeyHandle>());
+  const pointer = useRef<PointerState>({ ndc: new THREE.Vector2(), inside: false, tap: null });
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const register = useMemo(() => (index: number, handle: KeyHandle) => handles.current.set(index, handle), []);
 
-  useFrame((_, delta) => {
-    const t = 1 - Math.exp(-4 * delta);
-    material.color.lerp(target, t);
-    material.emissive.lerp(target, t);
-    if (!group.current) return;
-    group.current.rotation.y += delta * 0.6;
-    group.current.rotation.z += delta * 0.25;
+  useEffect(() => {
+    const toNdc = (e: PointerEvent) => {
+      const r = gl.domElement.getBoundingClientRect();
+      const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      return {
+        inside,
+        v: new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1),
+      };
+    };
+    const onMove = (e: PointerEvent) => {
+      const { inside, v } = toNdc(e);
+      pointer.current.inside = inside;
+      if (inside) pointer.current.ndc.copy(v);
+    };
+    const onDown = (e: PointerEvent) => {
+      const { inside, v } = toNdc(e);
+      if (inside) pointer.current.tap = v;
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerdown", onDown, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onDown);
+    };
+  }, [gl]);
+
+  const hit = (ndc: THREE.Vector2) => {
+    raycaster.setFromCamera(ndc, camera);
+    let best = -1;
+    let bestDistance = Infinity;
+    handles.current.forEach((handle, index) => {
+      const [first] = raycaster.intersectObjects(handle.meshes, false);
+      if (first && first.distance < bestDistance) {
+        bestDistance = first.distance;
+        best = index;
+      }
+    });
+    return best;
+  };
+
+  useFrame(() => {
+    const p = pointer.current;
+    hovered.current = p.inside ? hit(p.ndc) : -1;
+    if (p.tap) {
+      const index = hit(p.tap);
+      if (index >= 0) handles.current.get(index)?.bump();
+      p.tap = null;
+    }
   });
 
   return (
-    <Float speed={1.6} rotationIntensity={0.4} floatIntensity={1.2}>
-      <group ref={group} position={position} scale={0.62}>
-        {[0, Math.PI / 3, (2 * Math.PI) / 3].map((angle) => (
-          <group key={angle} rotation={[0, 0, angle]}>
-            <mesh material={material} scale={[1, 0.38, 1]}>
-              <torusGeometry args={[0.9, 0.045, 16, 96]} />
-            </mesh>
-          </group>
-        ))}
-        <mesh material={material}>
-          <sphereGeometry args={[0.2, 32, 32]} />
-        </mesh>
-      </group>
-    </Float>
+    <>
+      {specs.map((spec, i) => (
+        <Keycap
+          key={`${compact}-${i}`}
+          spec={spec}
+          index={i}
+          compact={compact}
+          colors={colors}
+          hovered={hovered}
+          register={register}
+          pointer={pointer}
+        />
+      ))}
+    </>
   );
-}
-
-/** Eases the camera toward the pointer for gentle parallax. */
-function Rig() {
-  useFrame((state, delta) => {
-    const { camera, pointer } = state;
-    camera.position.x = THREE.MathUtils.damp(camera.position.x, pointer.x * 0.6, 2.5, delta);
-    camera.position.y = THREE.MathUtils.damp(camera.position.y, 0.3 + pointer.y * 0.4, 2.5, delta);
-    camera.lookAt(0, 0, 0);
-  });
-  return null;
 }
 
 interface HeroSceneProps {
   /** Pause rendering when the hero is scrolled out of view */
   active?: boolean;
+  /** Phone/tablet layout: a band of keys above the copy */
   compact?: boolean;
-  /** Camera distance; larger pulls the scene back */
-  distance?: number;
   colors: PaletteColors;
 }
 
-/** Hero 3D: a laptop typing live code, floating extruded code symbols and a React atom. */
-const HeroScene = ({ active = true, compact = false, distance, colors }: HeroSceneProps) => {
-  return (
-    <Canvas
-      frameloop={active ? "always" : "never"}
-      dpr={[1, 1.75]}
-      camera={{ position: [0, 0.3, distance ?? (compact ? 7.2 : 8)], fov: 42 }}
-      gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-      style={{ background: "transparent" }}
-    >
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[4, 6, 5]} intensity={1.6} />
-      <pointLight position={[-4, 2, 3]} intensity={25} color={colors.c2} />
-      <pointLight position={[4, -1, 3]} intensity={18} color={colors.c3} />
+/** Hero 3D: chunky mechanical keycaps that drop in, float around the name and react to hover and taps. */
+const HeroScene = ({ active = true, compact = false, colors }: HeroSceneProps) => (
+  <Canvas
+    frameloop={active ? "always" : "never"}
+    dpr={[1, 1.75]}
+    camera={{ position: [0, 0, compact ? COMPACT_Z : WIDE_Z], fov: 35 }}
+    gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+    style={{ background: "transparent", pointerEvents: "none" }}
+  >
+    <ambientLight intensity={0.7} />
+    <directionalLight position={[3, 6, 6]} intensity={1.5} />
+    <pointLight position={[-6, 2, 4]} intensity={30} color={colors.c1} />
+    <pointLight position={[6, -2, 4]} intensity={24} color={colors.c2} />
 
-      <Laptop colors={colors} active={active} compact={compact} />
+    <Keys compact={compact} colors={colors} />
 
-      <Suspense fallback={null}>
-        <Glyph text="</>" color={colors.c1} position={[-2.35, 1.35, -0.3]} size={0.46} />
-        <Glyph text="{ }" color={colors.c2} position={[2.35, 1.5, -0.6]} speed={1.7} />
-        <Glyph text="=>" color={colors.c4} position={[-2.3, -1.35, 0.8]} speed={2.4} />
-        {!compact && (
-          <>
-            <Glyph text="( )" color={colors.c5} position={[2.5, -1.25, 0.5]} size={0.38} speed={2.2} />
-            <Glyph text="#" color={colors.c3} position={[-0.9, 2.25, -1.2]} size={0.36} speed={1.5} />
-          </>
-        )}
-      </Suspense>
-      <ReactAtom color={colors.c3} position={compact ? [2.1, 1.5, -0.6] : [0.95, 2.2, -1]} />
-
-      <Sparkles count={compact ? 30 : 60} scale={[9, 6, 4]} size={2.6} speed={0.35} color={colors.c1} />
-      <Sparkles count={compact ? 20 : 40} scale={[9, 6, 4]} size={2.2} speed={0.3} color={colors.c3} />
-
-      {/* Studio lighting baked locally — no remote HDR fetch */}
-      <Environment resolution={256}>
-        <Lightformer form="rect" intensity={4} color="#ffffff" position={[3, 4, 4]} scale={[5, 2, 1]} />
-        <Lightformer form="ring" intensity={2.5} color="#dbeafe" position={[-4, 2, 3]} scale={3} />
-        <Lightformer form="rect" intensity={2} color="#e0e7ff" position={[4, -2, -3]} scale={[3, 3, 1]} />
-      </Environment>
-
-      <Rig />
-    </Canvas>
-  );
-};
+    {/* Studio lighting baked locally — no remote HDR fetch */}
+    <Environment resolution={256}>
+      <Lightformer form="rect" intensity={4} color="#ffffff" position={[3, 4, 5]} scale={[6, 2, 1]} />
+      <Lightformer form="ring" intensity={2.5} color="#ffffff" position={[-4, 2, 3]} scale={3} />
+      <Lightformer form="rect" intensity={1.5} color="#ffffff" position={[0, -4, 2]} scale={[8, 1, 1]} />
+    </Environment>
+  </Canvas>
+);
 
 export default HeroScene;
