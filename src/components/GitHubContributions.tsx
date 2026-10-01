@@ -17,7 +17,7 @@ const GitHubContributions = () => {
     `&background=${bg}&ring=${c1}&fire=${c1}&currStreakNum=${fg}&sideNums=${fg}&currStreakLabel=${c1}&sideLabels=${c3}&dates=${fg}&stroke=${c2}`;
 
   return (
-    <section className="relative py-24 sm:py-32" id="github">
+    <section className="relative py-16 sm:py-24 lg:py-28" id="github">
       <div className="container">
         <SectionHeading
           index="05"

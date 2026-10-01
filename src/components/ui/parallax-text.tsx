@@ -39,8 +39,8 @@ export function ParallaxText({ text, className, direction = 1 }: ParallaxTextPro
       )}
     >
       <motion.span
-        style={{ x, skewX, WebkitTextStroke: "1.5px hsl(var(--brand-2) / 0.28)" }}
-        className="whitespace-nowrap font-display text-[22vw] font-extrabold uppercase leading-none text-transparent md:text-[15vw]"
+        style={{ x, skewX, WebkitTextStroke: "1.5px hsl(var(--brand-2) / 0.22)" }}
+        className="whitespace-nowrap font-display text-[18vw] font-extrabold uppercase leading-none text-transparent opacity-70 sm:opacity-100 md:text-[15vw]"
       >
         {text}
       </motion.span>

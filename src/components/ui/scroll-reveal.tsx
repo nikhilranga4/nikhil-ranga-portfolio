@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from "react";
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 interface ScrollReveal3DProps {
@@ -18,14 +19,18 @@ interface ScrollReveal3DProps {
 export function ScrollReveal3D({ children, className, direction = 0, tilt = 35 }: ScrollReveal3DProps) {
   const ref = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "center 55%"] });
+  // Phones get a calmer, straight-up rise so cards never look crooked mid-scroll
+  const isMobile = useIsMobile();
+  const side = isMobile ? 0 : direction;
+  const angle = isMobile ? Math.min(tilt, 14) : tilt;
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", isMobile ? "start 70%" : "center 55%"] });
   const progress = useSpring(scrollYProgress, { stiffness: 90, damping: 22, mass: 0.4 });
 
-  const rotateX = useTransform(progress, [0, 1], [tilt, 0]);
-  const rotateY = useTransform(progress, [0, 1], [direction * -25, 0]);
-  const x = useTransform(progress, [0, 1], [direction * 80, 0]);
-  const y = useTransform(progress, [0, 1], [90, 0]);
-  const scale = useTransform(progress, [0, 1], [0.86, 1]);
+  const rotateX = useTransform(progress, [0, 1], [angle, 0]);
+  const rotateY = useTransform(progress, [0, 1], [side * -25, 0]);
+  const x = useTransform(progress, [0, 1], [side * 80, 0]);
+  const y = useTransform(progress, [0, 1], [isMobile ? 40 : 90, 0]);
+  const scale = useTransform(progress, [0, 1], [isMobile ? 0.95 : 0.86, 1]);
   const opacity = useTransform(progress, [0, 0.55], [0, 1]);
 
   return (

@@ -183,7 +183,7 @@ const About = () => {
   const sway = useSpring(useTransform(sectionProgress, [0, 1], [-14, 14]), { stiffness: 60, damping: 20 });
 
   return (
-    <section ref={sectionRef} id="about" className="relative py-24 sm:py-32">
+    <section ref={sectionRef} id="about" className="relative py-16 sm:py-24 lg:py-28">
       <div className="container">
         <SectionHeading index="00" eyebrow="about" title="Hello, World!" bgText="about me" />
 

@@ -208,7 +208,7 @@ const Skills = () => {
   });
 
   return (
-    <section className="relative overflow-hidden py-24 sm:py-32" id="skills">
+    <section className="relative overflow-hidden py-16 sm:py-24 lg:py-28" id="skills">
       <div className="container">
         <SectionHeading
           index="03"

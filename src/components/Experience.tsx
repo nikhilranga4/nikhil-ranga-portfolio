@@ -34,7 +34,7 @@ const experiences: TimelineItem[] = [
 
 const Experience = () => {
   return (
-    <section className="relative py-24 sm:py-32" id="experience">
+    <section className="relative py-16 sm:py-24 lg:py-28" id="experience">
       <div className="container">
         <SectionHeading
           index="02"

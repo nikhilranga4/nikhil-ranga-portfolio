@@ -68,6 +68,12 @@ const RobotGuide = ({ colors, reduceMotion }: RobotGuideProps) => {
   const current = useRef<Clip | null>(null);
   const idleTime = useRef(0);
   const lastScroll = useRef({ y: window.scrollY, v: 0 });
+  // Phones: the robot pops up while you scroll, then ducks below the screen edge so it never blocks reading
+  const lastActiveAt = useRef(performance.now());
+  const tuck = useRef(0);
+  const [tucked, setTucked] = useState(false);
+  const tuckedRef = useRef(false);
+  const lastSection = useRef(section);
 
   // Tint the robot's body to the palette's lead colour
   const bodyMaterial = useMemo(() => {
@@ -159,7 +165,20 @@ const RobotGuide = ({ colors, reduceMotion }: RobotGuideProps) => {
 
     // Idle bob
     const bob = moving ? 0 : Math.sin(state.clock.elapsedTime * 2.2) * 2 * unit;
-    pos.y = baseY + bob;
+
+    // Phones: stay visible while scrolling / travelling, then tuck away after a short pause
+    const active = moving || scrollSpeed > 60 || lastSection.current !== sectionRef.current;
+    lastSection.current = sectionRef.current;
+    // Wall-clock time so slow / throttled devices tuck away just as quickly
+    const now = performance.now();
+    if (active) lastActiveAt.current = now;
+    const hide = mobile && !reduceMotion && now - lastActiveAt.current > 3200;
+    tuck.current = THREE.MathUtils.damp(tuck.current, hide ? 1 : 0, hide ? 3 : 9, delta);
+    if (hide !== tuckedRef.current) {
+      tuckedRef.current = hide;
+      setTucked(hide);
+    }
+    pos.y = baseY + bob - tuck.current * heightPx * 1.35 * unit;
 
     // Face direction of travel, or turn toward the page centre when standing
     const faceY = moving ? Math.sign(dx) * (Math.PI / 2) : -wp.side * 0.45;
@@ -212,7 +231,7 @@ const RobotGuide = ({ colors, reduceMotion }: RobotGuideProps) => {
         {/* Shift the bubble toward the page centre so it never runs off-screen */}
         <div style={{ transform: `translateX(${-WAYPOINTS[section].side * 32}%)` }}>
           <AnimatePresence mode="wait">
-            {settled && (
+            {settled && !tucked && (
               <motion.div
                 key={bubble}
                 initial={{ opacity: 0, scale: 0.4, y: 12 }}

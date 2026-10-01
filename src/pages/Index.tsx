@@ -16,6 +16,7 @@ import Loader from "@/components/Loader";
 import ScrollProgress from "@/components/ScrollProgress";
 import CustomCursor from "@/components/CustomCursor";
 import SmoothScroll from "@/components/SmoothScroll";
+import BackToTop from "@/components/BackToTop";
 
 const Stage3D = lazy(() => import("@/components/three/Stage3D"));
 
@@ -68,6 +69,7 @@ const Index = () => {
             <CustomCursor />
             <GlobalStage />
             <Navbar />
+            <BackToTop />
 
             <main className="relative z-10">
               <FloatingShapes />

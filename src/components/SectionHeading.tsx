@@ -16,7 +16,7 @@ const SectionHeading = ({ index, eyebrow, title, subtitle, className, bgText }: 
   const words = title.split(" ");
 
   return (
-    <div className={cn("relative isolate mb-14 pt-6 text-center sm:mb-20", className)}>
+    <div className={cn("relative isolate mb-10 pt-4 text-center sm:mb-16 sm:pt-6", className)}>
       <ParallaxText text={bgText ?? eyebrow} direction={Number(index) % 2 ? 1 : -1} className="-top-4 sm:-top-10" />
       <motion.p
         initial={{ opacity: 0, y: 12 }}
