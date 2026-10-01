@@ -2,18 +2,11 @@ import { useRef, useState } from "react";
 import { motion, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
 import { Briefcase, Code2, Cpu, GraduationCap, Globe, RotateCw, Smartphone, Users } from "lucide-react";
 import SectionHeading from "@/components/SectionHeading";
+import WhoAmIChat from "@/components/about/WhoAmIChat";
 import { ScrollReveal3D } from "@/components/ui/scroll-reveal";
 import { TiltCard } from "@/components/ui/tilt-card";
 import { cn } from "@/lib/utils";
 
-const STATEMENT =
-  "I craft playful, high-performance web & mobile experiences — from pixel-perfect React interfaces and cross-platform React Native apps to Node.js backends and AI/ML experiments. I love turning ideas into products people genuinely enjoy using.";
-
-/** Words that glow in the palette gradient once lit */
-const HIGHLIGHTS = new Set(["playful,", "React", "React Native", "Node.js", "AI/ML", "enjoy"]);
-
-// Keep multi-word highlights together as one token
-const TOKENS = STATEMENT.replace("React Native", "React Native").split(" ");
 
 const FACTS = [
   { icon: GraduationCap, label: "Education", value: "BTech CSE (AI & ML) · 2024" },
@@ -45,18 +38,6 @@ const SERVICES = [
 
 // Deterministic "barcode" stripes for the ID card
 const BARCODE = [3, 1, 2, 1, 3, 2, 1, 1, 3, 1, 2, 2, 1, 3, 1, 2, 1, 1, 2, 3, 1, 2, 1, 3, 2, 1];
-
-const Word = ({ word, progress, range }: { word: string; progress: MotionValue<number>; range: [number, number] }) => {
-  const opacity = useTransform(progress, range, [0.15, 1]);
-  const y = useTransform(progress, range, [8, 0]);
-  const highlight = HIGHLIGHTS.has(word.replace(" ", " "));
-
-  return (
-    <motion.span style={{ opacity, y }} className={cn("mr-[0.26em] inline-block", highlight && "text-gradient")}>
-      {word}
-    </motion.span>
-  );
-};
 
 /** A developer ID badge that flips in 3D (hover on desktop, tap on touch) to reveal quick facts. */
 const IdCard = ({ sway }: { sway: MotionValue<number> }) => {
@@ -173,10 +154,7 @@ const IdCard = ({ sway }: { sway: MotionValue<number> }) => {
 };
 
 const About = () => {
-  const textRef = useRef<HTMLParagraphElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({ target: textRef, offset: ["start 85%", "end 55%"] });
-  const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 28, mass: 0.3 });
 
   // The ID card sways gently as the section scrolls past
   const { scrollYProgress: sectionProgress } = useScroll({ target: sectionRef, offset: ["start end", "end start"] });
@@ -193,17 +171,7 @@ const About = () => {
           </ScrollReveal3D>
 
           <div>
-            <p className="mb-4 font-mono text-xs uppercase tracking-[0.25em] text-brand-1">// who I am</p>
-            <p
-              ref={textRef}
-              className="font-display text-2xl font-semibold leading-snug sm:text-3xl lg:text-[2rem] lg:leading-[1.3]"
-            >
-              {TOKENS.map((word, i) => {
-                const start = i / TOKENS.length;
-                const end = start + 1 / TOKENS.length;
-                return <Word key={i} word={word} progress={progress} range={[start, end]} />;
-              })}
-            </p>
+            <WhoAmIChat />
 
             <p className="mb-4 mt-12 font-mono text-xs uppercase tracking-[0.25em] text-brand-1">// what I do</p>
             <div className="grid gap-4 sm:grid-cols-3">

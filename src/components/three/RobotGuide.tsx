@@ -31,7 +31,7 @@ const WAYPOINTS: Record<string, Waypoint> = {
   skills: { side: 1, action: "Dance", loop: true, bubble: "My superpowers ⚡" },
   projects: { side: -1, action: "ThumbsUp", bubble: "Check these out! 🚀" },
   github: { side: 1, action: "Jump", bubble: "Commit streak 🔥" },
-  contact: { side: 0, action: "Wave", bubble: "Let's build together ✉️" },
+  contact: { side: -1, action: "Wave", bubble: "Let's build together ✉️" },
 };
 const ORDER = Object.keys(WAYPOINTS);
 

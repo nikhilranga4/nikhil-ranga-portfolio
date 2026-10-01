@@ -1,6 +1,6 @@
-import { useMemo, useState, type ComponentType } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Briefcase, Calendar, Code2, FileCode2, FileText, GitBranch, MapPin, Users } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
+import { AnimatePresence, animate, motion, useInView, useMotionValue, useReducedMotion } from "framer-motion";
+import { Briefcase, Calendar, Code2, FileCode2, FileText, GitBranch, MapPin, Pause, Play, Users } from "lucide-react";
 import SectionHeading from "@/components/SectionHeading";
 import { ScrollReveal3D } from "@/components/ui/scroll-reveal";
 import { cn } from "@/lib/utils";
@@ -169,10 +169,47 @@ const RoleTimeline = ({ active, onSelect }: { active: number; onSelect: (i: numb
   );
 };
 
+const AUTOPLAY_MS = 6000;
+
+/** Thin bar that fills while the active tab is on screen during autoplay. */
+const AutoplayBar = ({ progress, className }: { progress: ReturnType<typeof useMotionValue<number>>; className?: string }) => (
+  <span aria-hidden className={cn("absolute inset-x-3 bottom-1 h-0.5 overflow-hidden rounded-full bg-border/60", className)}>
+    <motion.span className="bg-candy block h-full origin-left rounded-full" style={{ scaleX: progress }} />
+  </span>
+);
+
 const Experience = () => {
   const [active, setActive] = useState(0);
   const role = roles[active];
   const RoleIcon = role.icon;
+
+  // Autoplay: cycle the tabs while the window is on screen; hovering, focusing or tapping pauses it
+  const windowRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(windowRef, { amount: 0.4 });
+  const reduceMotion = useReducedMotion();
+  const [hovered, setHovered] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
+  const progress = useMotionValue(0);
+  const playing = inView && !hovered && !userPaused && !reduceMotion;
+
+  useEffect(() => {
+    if (!playing) return;
+    const remaining = (1 - progress.get()) * AUTOPLAY_MS;
+    const controls = animate(progress, 1, {
+      duration: remaining / 1000,
+      ease: "linear",
+      onComplete: () => {
+        progress.set(0);
+        setActive((a) => (a + 1) % roles.length);
+      },
+    });
+    return () => controls.stop();
+  }, [playing, active, progress]);
+
+  const select = (i: number) => {
+    progress.set(0);
+    setActive(i);
+  };
 
   return (
     <section className="relative py-16 sm:py-24 lg:py-28" id="experience">
@@ -185,7 +222,14 @@ const Experience = () => {
         />
 
         <ScrollReveal3D tilt={25} className="mx-auto max-w-5xl">
-          <div className="gradient-border is-active relative overflow-hidden rounded-[1.75rem]">
+          <div
+            ref={windowRef}
+            onPointerEnter={(e) => e.pointerType === "mouse" && setHovered(true)}
+            onPointerLeave={() => setHovered(false)}
+            onFocusCapture={() => setHovered(true)}
+            onBlurCapture={() => setHovered(false)}
+            className="gradient-border is-active relative overflow-hidden rounded-[1.75rem]"
+          >
             <div className="glass absolute inset-0" />
 
             <div className="relative">
@@ -195,6 +239,15 @@ const Experience = () => {
                 <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
                 <span className="h-3 w-3 rounded-full bg-[#28c840]" />
                 <span className="ml-3 truncate font-mono text-xs text-muted-foreground">~/nikhil/career</span>
+                <button
+                  type="button"
+                  onClick={() => setUserPaused((p) => !p)}
+                  aria-label={userPaused ? "Resume auto-play" : "Pause auto-play"}
+                  className="ml-auto flex items-center gap-1.5 rounded-full border border-border bg-background/50 px-2.5 py-1 font-mono text-[0.65rem] text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {userPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+                  {userPaused ? "play" : playing ? "auto" : "paused"}
+                </button>
               </div>
 
               <div className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
@@ -212,9 +265,9 @@ const Experience = () => {
                           role="tab"
                           aria-selected={i === active}
                           aria-controls="experience-panel"
-                          onClick={() => setActive(i)}
+                          onClick={() => select(i)}
                           className={cn(
-                            "relative isolate flex flex-col gap-0.5 rounded-xl px-3 py-2.5 text-left transition-colors",
+                            "relative isolate flex flex-col gap-0.5 rounded-xl px-3 pb-3.5 pt-2.5 text-left transition-colors",
                             i === active ? "text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                           )}
                         >
@@ -232,6 +285,7 @@ const Experience = () => {
                           <span className="pl-6 text-[0.72rem]">
                             {label(r.start)} – {r.end ? label(r.end) : "now"}
                           </span>
+                          {i === active && <AutoplayBar progress={progress} />}
                         </button>
                       );
                     })}
@@ -252,7 +306,10 @@ const Experience = () => {
                           role="tab"
                           aria-selected={i === active}
                           aria-controls="experience-panel"
-                          onClick={() => setActive(i)}
+                          onClick={() => {
+                            select(i);
+                            setUserPaused(true);
+                          }}
                           className={cn(
                             "relative flex shrink-0 items-center gap-1.5 rounded-t-lg px-3 py-2 font-mono text-xs transition-colors",
                             i === active ? "bg-muted text-foreground" : "text-muted-foreground"
@@ -261,7 +318,7 @@ const Experience = () => {
                           <Icon className="h-3.5 w-3.5 text-brand-1" />
                           {r.file}
                           {i === active && (
-                            <motion.span layoutId="exp-tab" className="bg-candy absolute inset-x-0 top-0 h-0.5 rounded-full" />
+                            <AutoplayBar progress={progress} className="inset-x-0 bottom-0 top-auto h-[3px] rounded-none" />
                           )}
                         </button>
                       );
@@ -346,7 +403,7 @@ const Experience = () => {
                     </AnimatePresence>
                   </div>
 
-                  <RoleTimeline active={active} onSelect={setActive} />
+                  <RoleTimeline active={active} onSelect={select} />
 
                   {/* Status bar */}
                   <div className="bg-candy flex items-center justify-between gap-3 px-4 py-1.5 font-mono text-[0.65rem] font-semibold text-on-grad sm:px-5">
