@@ -1,85 +1,461 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+  /*
+   * Colour themes. Each palette defines raw HSL tokens for light and dark mode.
+   * Selectors also match descendants carrying data-palette (used by the theme picker swatches).
+   * Derived tokens (card, primary, ring, …) are computed from these below.
+   */
+  :root,
+  [data-palette] {
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface);
+    --popover-foreground: var(--foreground);
+    --primary: var(--brand-1);
+    --primary-foreground: var(--on-grad);
+    --secondary: var(--brand-2);
+    --secondary-foreground: var(--on-grad);
+    --accent: var(--brand-3);
+    --accent-foreground: var(--background);
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --input: var(--border);
+    --ring: var(--brand-1);
   }
 
+  :root {
+    --radius: 1.25rem;
+  }
+
+  /* Fallback (no data-palette yet): Lagoon & Coral, the default theme */
+  :root {
+    --font-display: 'Fredoka Variable';
+    --font-body: 'Nunito Variable';
+    --display-scale: 1.05;
+    --display-variation: normal;
+    --display-tracking: -0.01em;
+    --background: 168 56% 96.5%;
+    --foreground: 182 75% 9.4%;
+    --surface: 0 0% 100%;
+    --muted: 170 49% 90.8%;
+    --muted-foreground: 174 20% 36.5%;
+    --border: 171 39% 83.9%;
+    --brand-1: 176 89% 34.9%;
+    --brand-2: 11 86% 58.4%;
+    --brand-3: 162 80% 35.9%;
+    --brand-4: 160 83% 34.1%;
+    --brand-5: 30 68% 53.9%;
+    --on-grad: 180 87% 8.8%;
+    --glass-bg: 0 0% 100% / 0.65;
+    --glass-border: 176 60% 30% / 0.14;
+    --grid-line: 176 60% 30% / 0.07;
+    --grad-text: linear-gradient(100deg, #08a99e 0%, #12b886 35%, #f08c4a 70%, #f05a3a 100%);
+    --grad-fill: linear-gradient(110deg, #19e3d4 0%, #7cf5c8 40%, #ffb38a 75%, #ff7a5c 100%);
+  }
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --background: 186 78% 5.3%;
+    --foreground: 166 68% 96.3%;
+    --surface: 186 71% 8.2%;
+    --muted: 185 63% 11.8%;
+    --muted-foreground: 172 25% 64.9%;
+    --border: 183 53% 15.1%;
+    --brand-1: 176 80% 49.4%;
+    --brand-2: 11 100% 68%;
+    --brand-3: 158 86% 72.4%;
+    --brand-4: 158 86% 72.4%;
+    --brand-5: 33 100% 82.4%;
+    --on-grad: 180 87% 8.8%;
+    --glass-bg: 184 70% 9% / 0.5;
+    --glass-border: 170 100% 90% / 0.1;
+    --grid-line: 176 80% 60% / 0.07;
+    --grad-text: linear-gradient(100deg, #19e3d4 0%, #7cf5c8 30%, #ffd6a5 62%, #ff7a5c 100%);
+    --grad-fill: linear-gradient(110deg, #19e3d4 0%, #7cf5c8 40%, #ffb38a 75%, #ff7a5c 100%);
+  }
+
+  /* Glacier Chrome */
+  [data-palette="glacier"] {
+    --font-display: 'Unbounded Variable';
+    --font-body: 'Manrope Variable';
+    --display-scale: 0.72;
+    --display-variation: normal;
+    --display-tracking: -0.04em;
+    --background: 213 73% 97.1%;
+    --foreground: 215 70% 9.2%;
+    --surface: 0 0% 100%;
+    --muted: 211 60% 93.1%;
+    --muted-foreground: 214 25% 40.2%;
+    --border: 213 43% 86.9%;
+    --brand-1: 212 76% 50%;
+    --brand-2: 233 70% 59.4%;
+    --brand-3: 192 91% 36.5%;
+    --brand-4: 175 84% 31.6%;
+    --brand-5: 209 54% 50%;
+    --on-grad: 0 0% 100%;
+    --glass-bg: 0 0% 100% / 0.65;
+    --glass-border: 212 60% 40% / 0.14;
+    --grid-line: 212 60% 40% / 0.07;
+    --grad-text: linear-gradient(180deg, #5fb2ff 0%, #1f6fe0 55%, #3b3fc9 100%);
+    --grad-fill: linear-gradient(135deg, #4aa8ff 0%, #1f6fe0 55%, #4f5fe0 100%);
+  }
+  .dark[data-palette="glacier"],
+  .dark [data-palette="glacier"] {
+    --background: 219 70% 6.5%;
+    --foreground: 209 100% 95.9%;
+    --surface: 216 60% 9.8%;
+    --muted: 216 53% 14.9%;
+    --muted-foreground: 214 31% 67.6%;
+    --border: 216 46% 19%;
+    --brand-1: 209 100% 64.5%;
+    --brand-2: 232 100% 74.5%;
+    --brand-3: 188 100% 78%;
+    --brand-4: 171 77% 64.3%;
+    --brand-5: 203 100% 87.5%;
+    --on-grad: 0 0% 100%;
+    --glass-bg: 214 60% 14% / 0.45;
+    --glass-border: 205 100% 88% / 0.12;
+    --grid-line: 205 100% 85% / 0.06;
+    --grad-text: linear-gradient(180deg, #ffffff 0%, #d6eeff 32%, #7cc2ff 68%, #4a8dff 100%);
+    --grad-fill: linear-gradient(135deg, #7cc8ff 0%, #4a8dff 45%, #6d6bff 100%);
+  }
+
+  /* Lagoon & Coral */
+  [data-palette="lagoon"] {
+    --font-display: 'Fredoka Variable';
+    --font-body: 'Nunito Variable';
+    --display-scale: 1.05;
+    --display-variation: normal;
+    --display-tracking: -0.01em;
+    --background: 168 56% 96.5%;
+    --foreground: 182 75% 9.4%;
+    --surface: 0 0% 100%;
+    --muted: 170 49% 90.8%;
+    --muted-foreground: 174 20% 36.5%;
+    --border: 171 39% 83.9%;
+    --brand-1: 176 89% 34.9%;
+    --brand-2: 11 86% 58.4%;
+    --brand-3: 162 80% 35.9%;
+    --brand-4: 160 83% 34.1%;
+    --brand-5: 30 68% 53.9%;
+    --on-grad: 180 87% 8.8%;
+    --glass-bg: 0 0% 100% / 0.65;
+    --glass-border: 176 60% 30% / 0.14;
+    --grid-line: 176 60% 30% / 0.07;
+    --grad-text: linear-gradient(100deg, #08a99e 0%, #12b886 35%, #f08c4a 70%, #f05a3a 100%);
+    --grad-fill: linear-gradient(110deg, #19e3d4 0%, #7cf5c8 40%, #ffb38a 75%, #ff7a5c 100%);
+  }
+  .dark[data-palette="lagoon"],
+  .dark [data-palette="lagoon"] {
+    --background: 186 78% 5.3%;
+    --foreground: 166 68% 96.3%;
+    --surface: 186 71% 8.2%;
+    --muted: 185 63% 11.8%;
+    --muted-foreground: 172 25% 64.9%;
+    --border: 183 53% 15.1%;
+    --brand-1: 176 80% 49.4%;
+    --brand-2: 11 100% 68%;
+    --brand-3: 158 86% 72.4%;
+    --brand-4: 158 86% 72.4%;
+    --brand-5: 33 100% 82.4%;
+    --on-grad: 180 87% 8.8%;
+    --glass-bg: 184 70% 9% / 0.5;
+    --glass-border: 170 100% 90% / 0.1;
+    --grid-line: 176 80% 60% / 0.07;
+    --grad-text: linear-gradient(100deg, #19e3d4 0%, #7cf5c8 30%, #ffd6a5 62%, #ff7a5c 100%);
+    --grad-fill: linear-gradient(110deg, #19e3d4 0%, #7cf5c8 40%, #ffb38a 75%, #ff7a5c 100%);
+  }
+
+  /* Ink & Ultramarine */
+  [data-palette="ink"] {
+    --font-display: 'Fraunces Variable';
+    --font-body: 'Plus Jakarta Sans Variable';
+    --display-scale: 1.08;
+    --display-variation: "SOFT" 100, "WONK" 1;
+    --display-tracking: -0.03em;
+    --background: 45 31% 94.9%;
+    --foreground: 235 22% 10%;
+    --surface: 43 100% 98.6%;
+    --muted: 45 23% 89.8%;
+    --muted-foreground: 237 9% 39.6%;
+    --border: 45 19% 83.1%;
+    --brand-1: 235 100% 58.4%;
+    --brand-2: 11 100% 60.6%;
+    --brand-3: 250 100% 65.1%;
+    --brand-4: 156 76% 36.3%;
+    --brand-5: 235 100% 73.9%;
+    --on-grad: 0 0% 100%;
+    --glass-bg: 40 60% 99% / 0.7;
+    --glass-border: 235 20% 15% / 0.12;
+    --grid-line: 235 20% 15% / 0.06;
+    --grad-text: linear-gradient(100deg, #2b3cff 0%, #6b4dff 45%, #ff5a36 100%);
+    --grad-fill: linear-gradient(110deg, #2b3cff 0%, #6b4dff 50%, #ff5a36 100%);
+  }
+  .dark[data-palette="ink"],
+  .dark [data-palette="ink"] {
+    --background: 233 22% 8%;
+    --foreground: 45 31% 94.9%;
+    --surface: 235 21% 11.4%;
+    --muted: 235 26% 18%;
+    --muted-foreground: 237 11% 68.6%;
+    --border: 235 21% 20.8%;
+    --brand-1: 235 100% 71.8%;
+    --brand-2: 11 100% 68%;
+    --brand-3: 251 100% 77.3%;
+    --brand-4: 158 64% 51.6%;
+    --brand-5: 232 100% 86.3%;
+    --on-grad: 0 0% 100%;
+    --glass-bg: 235 25% 12% / 0.55;
+    --glass-border: 40 40% 95% / 0.1;
+    --grid-line: 40 40% 95% / 0.05;
+    --grad-text: linear-gradient(100deg, #8a95ff 0%, #a08bff 45%, #ff7a5c 100%);
+    --grad-fill: linear-gradient(110deg, #4a57ff 0%, #7a5cff 50%, #ff6a45 100%);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-padding-top: 6rem;
+  }
+
+  /* Lenis smooth scroll */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+  .lenis.lenis-stopped {
+    overflow: hidden;
   }
 
   body {
-    @apply bg-background text-foreground transition-colors duration-300;
+    @apply bg-background font-sans text-foreground antialiased transition-colors duration-500;
     font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
   }
 
-  .dark body {
-    background: linear-gradient(to bottom right, #000000, #111111);
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
   }
 
-  .glass-card {
-    @apply backdrop-blur-lg bg-white/10 border border-white/20;
+  /* Theme-specific display-face personality (e.g. Fraunces' soft, wonky axes) */
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-variation-settings: var(--display-variation, normal);
   }
 
-  .dark .glass-card {
-    @apply bg-black/40 border-white/10;
+  ::selection {
+    background: hsl(var(--brand-1) / 0.35);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    border: 2px solid hsl(var(--background));
+    background: linear-gradient(hsl(var(--brand-1)), hsl(var(--brand-2)), hsl(var(--brand-3)));
   }
 }
 
-.floating {
-  animation: floating 3s ease-in-out infinite;
+@layer components {
+  .glass {
+    background: hsl(var(--glass-bg));
+    border: 1px solid hsl(var(--glass-border));
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+  }
+
+  /* Each theme ships its own gradient style (chrome, tropical sweep, ink-to-vermilion) */
+  .text-gradient {
+    background-image: var(--grad-text);
+    background-size: 160% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: gradient-x 6s ease infinite;
+  }
+
+  .bg-candy {
+    background-image: var(--grad-fill);
+    background-size: 160% 100%;
+    color: hsl(var(--on-grad));
+  }
+
+  /* Animated conic gradient border — add to a relative, rounded element */
+  /* No `isolation` here: it would flatten 3D children inside tilt cards */
+  .gradient-border {
+    position: relative;
+  }
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1.5px;
+    border-radius: inherit;
+    background: conic-gradient(
+      from var(--angle, 0deg),
+      hsl(var(--brand-1)),
+      hsl(var(--brand-2)),
+      hsl(var(--brand-3)),
+      hsl(var(--brand-4)),
+      hsl(var(--brand-1))
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    animation: border-spin 4s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .gradient-border:hover::before,
+  .gradient-border.is-active::before {
+    opacity: 1;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[0.72rem] font-medium;
+    background: hsl(var(--glass-bg));
+    border: 1px solid hsl(var(--glass-border));
+  }
+
+  /* Chunky mechanical keycap: face colour + a darker "side" drawn as a solid shadow for depth */
+  .keycap {
+    --key-face: hsl(var(--surface));
+    --key-side: color-mix(in oklab, var(--key-face), black 38%);
+    --key-depth: 6px;
+    position: relative;
+    border-radius: 0.95rem;
+    background: var(--key-face);
+    box-shadow:
+      0 var(--key-depth) 0 0 var(--key-side),
+      0 calc(var(--key-depth) + 10px) 22px -8px rgb(0 0 0 / 0.45);
+    transition:
+      transform 0.12s ease,
+      box-shadow 0.12s ease,
+      background-color 0.25s ease;
+  }
+  /* The slightly dished top surface */
+  .keycap::before {
+    content: "";
+    position: absolute;
+    inset: 7% 9% 15%;
+    border-radius: 0.7rem;
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 75%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18);
+    pointer-events: none;
+  }
+  .keycap[data-pressed="true"] {
+    transform: translateY(calc(var(--key-depth) - 1.5px));
+    box-shadow:
+      0 1.5px 0 0 var(--key-side),
+      0 4px 10px -4px rgb(0 0 0 / 0.4);
+  }
+
+  .noise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--grid-line)) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--grid-line)) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
 }
 
-@keyframes floating {
-  0% { transform: translate(0, 0px); }
-  50% { transform: translate(0, 15px); }
-  100% { transform: translate(0, -0px); }
+@layer utilities {
+  .perspective {
+    perspective: 1200px;
+  }
+  .perspective-near {
+    perspective: 600px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
 }
 
-.spinner {
-  border-color: rgba(255, 255, 255, 0.2);
-  border-top-color: #969697;
-  /* Primary color for dark mode */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-spin {
+  to {
+    --angle: 360deg;
+  }
+}
+
+@keyframes gradient-x {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Hide the native cursor only when our custom cursor is mounted */
+@media (pointer: fine) {
+  html.has-custom-cursor,
+  html.has-custom-cursor * {
+    cursor: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Circular reveal when switching theme (View Transitions API) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+/* Freeze CSS transitions while the new-theme snapshot is captured */
+html.theme-switching,
+html.theme-switching * {
+  transition: none !important;
 }
