@@ -1,5 +1,5 @@
-import { Component, Suspense, lazy, useCallback, useEffect, useState, type ReactNode } from "react";
-import { AnimatePresence, useReducedMotion } from "framer-motion";
+import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMotionValue, useReducedMotion } from "framer-motion";
 import Hero from "@/components/Hero";
 import About from "@/components/About";
 import Projects from "@/components/Projects";
@@ -12,7 +12,8 @@ import Background from "@/components/Background";
 import FloatingShapes from "@/components/FloatingShapes";
 import GitHubContributions from "@/components/GitHubContributions";
 import Navbar from "@/components/Navbar";
-import Loader from "@/components/Loader";
+import Intro from "@/components/intro/Intro";
+import { IntroContext } from "@/lib/intro";
 import ScrollProgress from "@/components/ScrollProgress";
 import CustomCursor from "@/components/CustomCursor";
 import SmoothScroll from "@/components/SmoothScroll";
@@ -54,24 +55,42 @@ const GlobalStage = () => {
 };
 
 const Index = () => {
-  const [loading, setLoading] = useState(true);
-  const handleLoaded = useCallback(() => setLoading(false), []);
+  const [introDone, setIntroDone] = useState(false);
+  const [settled, setSettled] = useState(false);
+  const finishIntro = useCallback(() => setIntroDone(true), []);
+  const introProgress = useMotionValue(0);
+  const intro = useMemo(
+    () => ({ done: introDone, settled, finish: finishIntro, progress: introProgress }),
+    [introDone, settled, finishIntro, introProgress]
+  );
+
+  // Start the heavier 3D (hero keycaps, cursor, robot) once the hand-off has finished animating
+  useEffect(() => {
+    if (!introDone) return;
+    const start = () => setSettled(true);
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(start, { timeout: 1200 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = setTimeout(start, 600);
+    return () => clearTimeout(id);
+  }, [introDone]);
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <AnimatePresence>{loading && <Loader onDone={handleLoaded} />}</AnimatePresence>
-
-      {!loading && (
+      <IntroContext.Provider value={intro}>
         <SmoothScroll>
           <div className="relative min-h-screen overflow-x-clip bg-background text-foreground">
             <Background />
             <ScrollProgress />
             <CustomCursor />
-            <GlobalStage />
+            {/* The 3D cursor and robot wait until the intro is over so nothing competes with it */}
+            {settled && <GlobalStage />}
             <Navbar />
             <BackToTop />
 
             <main className="relative z-10">
+              <Intro />
               <FloatingShapes />
               <Hero />
               <About />
@@ -86,7 +105,7 @@ const Index = () => {
             </div>
           </div>
         </SmoothScroll>
-      )}
+      </IntroContext.Provider>
     </ThemeProvider>
   );
 };

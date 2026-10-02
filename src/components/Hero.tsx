@@ -24,10 +24,10 @@ import { useTheme } from "@/components/theme-provider";
 import { Magnetic } from "@/components/ui/magnetic";
 import Marquee from "@/components/ui/marquee";
 import { cn } from "@/lib/utils";
+import { useIntro } from "@/lib/intro";
 
-// Start fetching the 3D chunk immediately so it's ready by the time the loader finishes
-const heroSceneImport = import("@/components/three/HeroScene");
-const HeroScene = lazy(() => heroSceneImport);
+// Loaded once the intro is over (the intro prefetches it while idle)
+const HeroScene = lazy(() => import("@/components/three/HeroScene"));
 
 const ROLES = ["Full Stack Developer", "AI/ML Engineer", "React Native Dev", "Creative Coder"];
 const FIRST = "Nikhil";
@@ -55,8 +55,8 @@ const STACK = [
 
 const TAPE = ["Available for work", "Open to collaborations", "Based in Hyderabad", "Web · Mobile · AI"];
 
-/** Letters start "typing" in once the loader's columns begin to lift. */
-const NAME_DELAY = 0.55;
+/** Letters start "typing" in as the intro's screen dissolves into the hero. */
+const NAME_DELAY = 0.2;
 const LETTER_GAP = 0.06;
 
 const container: Variants = {
@@ -115,14 +115,15 @@ function useMediaQuery(query: string) {
   return matches;
 }
 
-/** Number that counts up from 0 on mount. */
-const CountUp = ({ to, suffix = "", delay = 0 }: { to: number; suffix?: string; delay?: number }) => {
+/** Number that counts up from 0 once `play` is true. */
+const CountUp = ({ to, suffix = "", delay = 0, play = true }: { to: number; suffix?: string; delay?: number; play?: boolean }) => {
   const value = useMotionValue(0);
   const rounded = useTransform(value, (v) => `${Math.round(v)}${suffix}`);
   useEffect(() => {
+    if (!play) return;
     const controls = animate(value, to, { duration: 1.6, delay, ease: [0.16, 1, 0.3, 1] });
     return () => controls.stop();
-  }, [value, to, delay]);
+  }, [value, to, delay, play]);
   return <motion.span>{rounded}</motion.span>;
 };
 
@@ -154,7 +155,7 @@ const sliceStyle = (k: number, n: number): CSSProperties => ({
 const Letter = ({ char, order, style }: { char: string; order: number; style?: CSSProperties }) => (
   <motion.span
     initial={{ opacity: 0, y: "-0.3em", scale: 0.6 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
+    animate={useIntro().done ? { opacity: 1, y: 0, scale: 1 } : undefined}
     transition={{ type: "spring", stiffness: 520, damping: 22, delay: NAME_DELAY + order * LETTER_GAP }}
     whileHover={{ y: "0.06em", scale: 0.93 }}
     whileTap={{ y: "0.08em", scale: 0.9 }}
@@ -169,7 +170,7 @@ const Caret = () => (
   <motion.span
     aria-hidden
     initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
+    animate={useIntro().done ? { opacity: 1 } : undefined}
     transition={{ delay: NAME_DELAY + (FIRST.length + LAST.length) * LETTER_GAP }}
     className="ml-[0.05em] inline-block h-[0.72em] w-[0.06em] translate-y-[0.04em] rounded-[0.02em] bg-brand-1"
   >
@@ -319,6 +320,7 @@ const Hero = () => {
   const desktop = useMediaQuery("(min-width: 1024px)");
   const { colors } = useTheme();
   const reduceMotion = useReducedMotion();
+  const { done: play, settled } = useIntro();
 
   // The copy drifts up and fades as the hero scrolls away (the 3D keys scatter on their own)
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end start"] });
@@ -333,7 +335,12 @@ const Hero = () => {
   }, []);
 
   return (
-    <section ref={sectionRef} id="home" className="relative flex min-h-[100svh] flex-col overflow-hidden pt-20 sm:pt-24">
+    <section
+      ref={sectionRef}
+      id="home"
+      // Sits under the intro's last screen so flying into the monitor lands right on the hero
+      className="relative -mt-[100svh] flex min-h-[100svh] flex-col overflow-hidden pt-20 sm:pt-24"
+    >
       {/* Soft spotlight behind the name */}
       <div
         aria-hidden
@@ -347,7 +354,7 @@ const Hero = () => {
       >
         <SceneBoundary>
           <Suspense fallback={null}>
-            <HeroScene key={desktop ? "wide" : "compact"} active={inView} compact={!desktop} colors={colors} />
+            {settled && <HeroScene key={desktop ? "wide" : "compact"} active={inView} compact={!desktop} colors={colors} />}
           </Suspense>
         </SceneBoundary>
       </div>
@@ -358,7 +365,7 @@ const Hero = () => {
       >
         <motion.div
           initial={reduceMotion ? false : { opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={play ? { opacity: 1, y: 0 } : undefined}
           transition={{ delay: NAME_DELAY - 0.2, type: "spring", stiffness: 160, damping: 18 }}
           className="mb-4 flex flex-wrap items-center justify-center gap-2 sm:mb-6"
         >
@@ -376,7 +383,12 @@ const Hero = () => {
 
         <Name />
 
-        <motion.div variants={container} initial={reduceMotion ? false : "hidden"} animate="show" className="flex w-full flex-col items-center">
+        <motion.div
+          variants={container}
+          initial={reduceMotion ? false : "hidden"}
+          animate={play ? "show" : "hidden"}
+          className="flex w-full flex-col items-center"
+        >
           <motion.div
             variants={item}
             className="glass mt-6 inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 font-mono text-sm sm:mt-8 sm:px-5 sm:text-base"
@@ -444,12 +456,12 @@ const Hero = () => {
           <motion.div variants={item} className="mt-9 flex flex-wrap justify-center gap-3 sm:mt-10 sm:gap-4">
             <StatKey label="projects shipped">
               <span className="text-gradient">
-                <CountUp to={11} delay={NAME_DELAY + 1.2} />
+                <CountUp to={11} delay={NAME_DELAY + 1.2} play={play} />
               </span>
             </StatKey>
             <StatKey label="technologies">
               <span className="text-gradient">
-                <CountUp to={20} suffix="+" delay={NAME_DELAY + 1.35} />
+                <CountUp to={20} suffix="+" delay={NAME_DELAY + 1.35} play={play} />
               </span>
             </StatKey>
             <StatKey label="full stack intern" className="basis-full text-center sm:basis-auto sm:text-left">
@@ -464,7 +476,7 @@ const Hero = () => {
 
       <motion.div
         initial={reduceMotion ? false : { opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={play ? { opacity: 1, y: 0 } : undefined}
         transition={{ delay: NAME_DELAY + 1.1, type: "spring", stiffness: 80, damping: 18 }}
       >
         <Tapes />

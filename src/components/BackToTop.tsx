@@ -8,7 +8,11 @@ const BackToTop = () => {
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 24 });
   const [show, setShow] = useState(false);
 
-  useMotionValueEvent(scrollY, "change", (y) => setShow(y > window.innerHeight * 0.9));
+  // Appears once you're past the hero (the intro sits above it)
+  useMotionValueEvent(scrollY, "change", (y) => {
+    const heroTop = document.getElementById("home")?.offsetTop ?? 0;
+    setShow(y > heroTop + window.innerHeight * 0.9);
+  });
 
   return (
     <AnimatePresence>

@@ -28,7 +28,8 @@ const SmoothScroll = ({ children }: { children: ReactNode }) => {
       const target = document.querySelector<HTMLElement>(hash);
       if (!target) return;
       e.preventDefault();
-      const go = () => lenis.scrollTo(hash === "#home" ? 0 : target, { offset: -90, duration: 1.4 });
+      // The hero sits right under the intro, so "home" means the hero itself rather than the page top
+      const go = () => lenis.scrollTo(target, { offset: hash === "#home" ? 0 : -90, duration: 1.4 });
       // Links inside the mobile sheet: wait for it to close and release its scroll lock
       if (link.closest('[role="dialog"]')) setTimeout(go, 350);
       else go();

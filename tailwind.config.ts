@@ -98,8 +98,18 @@ export default {
         tumble: "tumble 18s linear infinite",
         shine: "shine 5s ease-in-out infinite",
         blink: "blink 1.05s step-end infinite",
+        "packet-down": "packet-down 1.1s linear infinite",
+        "packet-up": "packet-up 1.1s linear infinite",
       },
       keyframes: {
+        "packet-down": {
+          from: { top: "-8%" },
+          to: { top: "100%" },
+        },
+        "packet-up": {
+          from: { top: "100%" },
+          to: { top: "-8%" },
+        },
         blink: {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0" },

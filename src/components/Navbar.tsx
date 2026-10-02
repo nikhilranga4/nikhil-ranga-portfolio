@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useMotionValueEvent } from "framer-motion";
 import { ModeToggle } from "@/components/mode-toggle";
 import ThemePicker from "@/components/ThemePicker";
 import MobileMenu from "@/components/MobileMenu";
 import { MenuToggle } from "@/components/ui/menu-toggle";
 import { MOBILE_MENU_ID, NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+import { useIntro } from "@/lib/intro";
 
 const Navbar = () => {
   const [active, setActive] = useState("home");
@@ -13,6 +14,10 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
   const toggleRef = useRef<HTMLButtonElement>(null);
+  // Hidden while the intro plays; it slides in as the intro hands over to the hero
+  const { progress } = useIntro();
+  const [inIntro, setInIntro] = useState(() => progress.get() < 0.95);
+  useMotionValueEvent(progress, "change", (p) => setInIntro(p < 0.95));
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -53,9 +58,12 @@ const Navbar = () => {
     <>
       <motion.header
         initial={{ y: -80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 120, damping: 18, delay: 0.2 }}
-        className="fixed inset-x-0 top-3 z-50 flex justify-center px-3 sm:px-4"
+        animate={inIntro ? { y: -80, opacity: 0 } : { y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 120, damping: 18 }}
+        className={cn(
+          "fixed inset-x-0 top-3 z-50 flex justify-center px-3 sm:px-4",
+          inIntro && "pointer-events-none"
+        )}
       >
         <nav
           className={cn(
