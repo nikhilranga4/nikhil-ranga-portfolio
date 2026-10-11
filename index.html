@@ -1,14 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark" data-palette="lagoon">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nikhil Ranga</title>
-  <meta name="description" content="portfolio" />
+  <title>Nikhil Ranga — Full Stack Developer & AI/ML Engineer</title>
+  <meta name="description" content="Nikhil Ranga — Full Stack Developer and AI/ML Engineer building playful, performant web and mobile experiences with React, React Native, Node.js and Python." />
   <meta name="author" content="nikhilranga" />
+  <meta name="theme-color" content="#031618" />
 
   <link rel="icon" href="/favicon.ico" type="image/gif" />
+
+  <script>
+    // Apply the saved theme before first paint to avoid a flash of the wrong colours
+    (function () {
+      try {
+        var mode = localStorage.getItem("vite-ui-theme") || "dark";
+        if (mode === "system") mode = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        var palette = localStorage.getItem("vite-ui-palette");
+        var root = document.documentElement;
+        root.classList.remove("light", "dark");
+        root.classList.add(mode);
+        if (/^(glacier|lagoon|ink)$/.test(palette)) root.dataset.palette = palette;
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>

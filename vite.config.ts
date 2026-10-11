@@ -19,4 +19,8 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // three.js is split out automatically via the lazy HeroScene import
+    chunkSizeWarningLimit: 1200,
+  },
 }));
