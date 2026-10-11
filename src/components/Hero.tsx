@@ -21,6 +21,7 @@ import {
 import { ArrowDownRight, FileText, Github, Linkedin, Mail, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTheme } from "@/components/theme-provider";
+import { useIntroRevealed, useIntroSceneReady } from "@/lib/intro";
 import { Magnetic } from "@/components/ui/magnetic";
 import Marquee from "@/components/ui/marquee";
 import { cn } from "@/lib/utils";
@@ -115,14 +116,16 @@ function useMediaQuery(query: string) {
   return matches;
 }
 
-/** Number that counts up from 0 on mount. */
+/** Number that counts up from 0 once the intro reveals the page. */
 const CountUp = ({ to, suffix = "", delay = 0 }: { to: number; suffix?: string; delay?: number }) => {
   const value = useMotionValue(0);
   const rounded = useTransform(value, (v) => `${Math.round(v)}${suffix}`);
+  const revealed = useIntroRevealed();
   useEffect(() => {
+    if (!revealed) return;
     const controls = animate(value, to, { duration: 1.6, delay, ease: [0.16, 1, 0.3, 1] });
     return () => controls.stop();
-  }, [value, to, delay]);
+  }, [value, to, delay, revealed]);
   return <motion.span>{rounded}</motion.span>;
 };
 
@@ -134,6 +137,9 @@ const PulseDot = () => (
 );
 
 // ── The name ───────────────────────────────────────────────────────────────
+
+const LETTER_HIDDEN = { opacity: 0, y: "-0.3em", scale: 0.6 };
+const LETTER_SHOWN = { opacity: 1, y: 0, scale: 1 };
 
 const NAME_TEXT = "font-display font-bold leading-[0.92] tracking-[var(--display-tracking,-0.03em)] whitespace-nowrap";
 
@@ -153,8 +159,8 @@ const sliceStyle = (k: number, n: number): CSSProperties => ({
 /** One letter: types in like a key press and dips down (pressed) on hover or tap. */
 const Letter = ({ char, order, style }: { char: string; order: number; style?: CSSProperties }) => (
   <motion.span
-    initial={{ opacity: 0, y: "-0.3em", scale: 0.6 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
+    initial={LETTER_HIDDEN}
+    animate={useIntroRevealed() ? LETTER_SHOWN : LETTER_HIDDEN}
     transition={{ type: "spring", stiffness: 520, damping: 22, delay: NAME_DELAY + order * LETTER_GAP }}
     whileHover={{ y: "0.06em", scale: 0.93 }}
     whileTap={{ y: "0.08em", scale: 0.9 }}
@@ -169,7 +175,7 @@ const Caret = () => (
   <motion.span
     aria-hidden
     initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
+    animate={{ opacity: useIntroRevealed() ? 1 : 0 }}
     transition={{ delay: NAME_DELAY + (FIRST.length + LAST.length) * LETTER_GAP }}
     className="ml-[0.05em] inline-block h-[0.72em] w-[0.06em] translate-y-[0.04em] rounded-[0.02em] bg-brand-1"
   >
@@ -319,6 +325,8 @@ const Hero = () => {
   const desktop = useMediaQuery("(min-width: 1024px)");
   const { colors } = useTheme();
   const reduceMotion = useReducedMotion();
+  const revealed = useIntroRevealed();
+  const sceneReady = useIntroSceneReady();
 
   // The copy drifts up and fades as the hero scrolls away (the 3D keys scatter on their own)
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end start"] });
@@ -347,7 +355,7 @@ const Hero = () => {
       >
         <SceneBoundary>
           <Suspense fallback={null}>
-            <HeroScene key={desktop ? "wide" : "compact"} active={inView} compact={!desktop} colors={colors} />
+            <HeroScene key={desktop ? "wide" : "compact"} active={inView} start={revealed} onReady={sceneReady} compact={!desktop} colors={colors} />
           </Suspense>
         </SceneBoundary>
       </div>
@@ -358,7 +366,7 @@ const Hero = () => {
       >
         <motion.div
           initial={reduceMotion ? false : { opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={revealed || reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -12 }}
           transition={{ delay: NAME_DELAY - 0.2, type: "spring", stiffness: 160, damping: 18 }}
           className="mb-4 flex flex-wrap items-center justify-center gap-2 sm:mb-6"
         >
@@ -376,7 +384,7 @@ const Hero = () => {
 
         <Name />
 
-        <motion.div variants={container} initial={reduceMotion ? false : "hidden"} animate="show" className="flex w-full flex-col items-center">
+        <motion.div variants={container} initial={reduceMotion ? false : "hidden"} animate={revealed || reduceMotion ? "show" : "hidden"} className="flex w-full flex-col items-center">
           <motion.div
             variants={item}
             className="glass mt-6 inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 font-mono text-sm sm:mt-8 sm:px-5 sm:text-base"
@@ -464,7 +472,7 @@ const Hero = () => {
 
       <motion.div
         initial={reduceMotion ? false : { opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={revealed || reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
         transition={{ delay: NAME_DELAY + 1.1, type: "spring", stiffness: 80, damping: 18 }}
       >
         <Tapes />

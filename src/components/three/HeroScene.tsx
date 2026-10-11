@@ -137,9 +137,11 @@ interface KeycapProps {
   hovered: MutableRefObject<number>;
   register: (index: number, handle: KeyHandle) => void;
   pointer: MutableRefObject<PointerState>;
+  /** Whether the keys may drop in yet */
+  start: MutableRefObject<boolean>;
 }
 
-function Keycap({ spec, index, compact, colors, hovered, register, pointer }: KeycapProps) {
+function Keycap({ spec, index, compact, colors, hovered, register, pointer, start }: KeycapProps) {
   const width = spec.width ?? 1;
   const viewport = useThree((s) => s.viewport);
   // Push deeper keys outward so they still land at (fx, fy) on screen
@@ -173,7 +175,8 @@ function Keycap({ spec, index, compact, colors, hovered, register, pointer }: Ke
 
   // Drop-in spring and interaction state
   const sim = useRef({
-    born: performance.now() + (compact ? 250 : 450) + index * 90,
+    // Set once the intro reveals the page, so the keys drop in where people can see them
+    born: Infinity,
     drop: 7,
     vel: 0,
     press: 0,
@@ -201,6 +204,7 @@ function Keycap({ spec, index, compact, colors, hovered, register, pointer }: Ke
     if (!root.current || !tilt.current || !spin.current || !press.current || !top.current) return;
 
     // Drop in from above with a bouncy spring once this key's turn comes
+    if (start.current && s.born === Infinity) s.born = performance.now() + (compact ? 250 : 450) + index * 90;
     if (performance.now() >= s.born) {
       for (let left = delta; left > 0; left -= 1 / 120) {
         const h = Math.min(left, 1 / 120);
@@ -274,8 +278,17 @@ function Keycap({ spec, index, compact, colors, hovered, register, pointer }: Ke
 
 // ── Scene ──────────────────────────────────────────────────────────────────
 
-function Keys({ compact, colors }: { compact: boolean; colors: PaletteColors }) {
+interface KeysProps {
+  compact: boolean;
+  colors: PaletteColors;
+  start: boolean;
+  onReady?: () => void;
+}
+
+function Keys({ compact, colors, start, onReady }: KeysProps) {
   const { camera, gl } = useThree();
+  const startRef = useRef(start);
+  startRef.current = start;
   const specs = compact ? COMPACT : WIDE;
   const hovered = useRef(-1);
   const handles = useRef(new Map<number, KeyHandle>());
@@ -323,6 +336,20 @@ function Keys({ compact, colors }: { compact: boolean; colors: PaletteColors }) 
     return best;
   };
 
+  // Compile every key's shaders up front (they start off-screen, so the renderer would otherwise
+  // only do it on the frame they fall into view, freezing the drop-in for a moment), then let the
+  // intro know the scene is ready once a frame has been drawn with them
+  const warmup = useRef<"pending" | "compiled" | "ready">("pending");
+  useFrame(({ scene }) => {
+    if (warmup.current === "pending" && scene.environment) {
+      gl.compile(scene, camera);
+      warmup.current = "compiled";
+    } else if (warmup.current === "compiled") {
+      warmup.current = "ready";
+      onReady?.();
+    }
+  });
+
   useFrame(() => {
     const p = pointer.current;
     hovered.current = p.inside ? hit(p.ndc) : -1;
@@ -345,6 +372,7 @@ function Keys({ compact, colors }: { compact: boolean; colors: PaletteColors }) 
           hovered={hovered}
           register={register}
           pointer={pointer}
+          start={startRef}
         />
       ))}
     </>
@@ -356,11 +384,15 @@ interface HeroSceneProps {
   active?: boolean;
   /** Phone/tablet layout: a band of keys above the copy */
   compact?: boolean;
+  /** Hold the keys above the frame until this turns true (the intro is still covering the page) */
+  start?: boolean;
+  /** Called once the scene's shaders are compiled and it has drawn a frame */
+  onReady?: () => void;
   colors: PaletteColors;
 }
 
 /** Hero 3D: chunky mechanical keycaps that drop in, float around the name and react to hover and taps. */
-const HeroScene = ({ active = true, compact = false, colors }: HeroSceneProps) => (
+const HeroScene = ({ active = true, compact = false, start = true, onReady, colors }: HeroSceneProps) => (
   <Canvas
     frameloop={active ? "always" : "never"}
     dpr={[1, 1.75]}
@@ -373,7 +405,7 @@ const HeroScene = ({ active = true, compact = false, colors }: HeroSceneProps) =
     <pointLight position={[-6, 2, 4]} intensity={30} color={colors.c1} />
     <pointLight position={[6, -2, 4]} intensity={24} color={colors.c2} />
 
-    <Keys compact={compact} colors={colors} />
+    <Keys compact={compact} colors={colors} start={start} onReady={onReady} />
 
     {/* Studio lighting baked locally — no remote HDR fetch */}
     <Environment resolution={256}>

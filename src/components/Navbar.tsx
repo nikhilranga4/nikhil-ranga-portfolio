@@ -6,8 +6,10 @@ import MobileMenu from "@/components/MobileMenu";
 import { MenuToggle } from "@/components/ui/menu-toggle";
 import { MOBILE_MENU_ID, NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+import { useIntroRevealed } from "@/lib/intro";
 
 const Navbar = () => {
+  const revealed = useIntroRevealed();
   const [active, setActive] = useState("home");
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -53,8 +55,8 @@ const Navbar = () => {
     <>
       <motion.header
         initial={{ y: -80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 120, damping: 18, delay: 0.2 }}
+        animate={revealed ? { y: 0, opacity: 1 } : { y: -80, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 120, damping: 18, delay: 0.5 }}
         className="fixed inset-x-0 top-3 z-50 flex justify-center px-3 sm:px-4"
       >
         <nav

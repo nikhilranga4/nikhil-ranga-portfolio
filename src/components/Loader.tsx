@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { CornerDownLeft } from "lucide-react";
 import { brandMix } from "@/lib/brand";
@@ -8,12 +8,20 @@ const KEY_COUNT = ROWS.join("").length;
 
 /** Timeline in ms (scaled down for reduced motion). */
 const T = {
-  typeStart: 1000,
-  typeGap: 115,
-  enterIn: 2350,
-  enterPress: 2620,
-  done: 2950,
+  typeStart: 1200,
+  /** Mount the site underneath, after the last key and before Enter pops in */
+  mount: 3950,
+  enterIn: 4100,
+  enterPress: 4700,
+  done: 5300,
 };
+
+/** Gap before each key press: an uneven, human rhythm with a breath between the two words. */
+const GAPS = [0, 230, 250, 220, 260, 240, 420, 230, 250, 220, 240];
+/** When each key gets pressed, in ms from the start. */
+const KEY_TIMES = GAPS.reduce<number[]>((times, gap, i) => [...times, (i ? times[i - 1] : T.typeStart) + gap], []);
+/** How long a typed key stays pushed down. */
+const PRESS_MS = 170;
 
 const CAPTIONS = [
   { until: 30, text: "warming up the keyboard" },
@@ -35,7 +43,7 @@ interface KeyProps {
 }
 
 /** One keycap: drops onto the deck, lights up when "typed", then launches upward on exit. */
-const Key = ({ char, index, lit, pressed }: KeyProps) => {
+const Key = memo(({ char, index, lit, pressed }: KeyProps) => {
   const fly = useMemo(() => ({ rotate: rand(-70, 70), x: `${rand(-30, 30)}vw` }), []);
   return (
     <motion.div
@@ -47,7 +55,7 @@ const Key = ({ char, index, lit, pressed }: KeyProps) => {
         rotate: fly.rotate,
         transition: { duration: 0.75, ease: [0.6, 0, 0.84, 0.2], delay: index * 0.025 },
       }}
-      transition={{ type: "spring", stiffness: 260, damping: 17, delay: 0.25 + index * 0.05 }}
+      transition={{ type: "spring", stiffness: 240, damping: 19, delay: 0.25 + index * 0.07 }}
       className="relative"
     >
       <div
@@ -69,45 +77,56 @@ const Key = ({ char, index, lit, pressed }: KeyProps) => {
           aria-hidden
           initial={{ scale: 0.9, opacity: 0.9 }}
           animate={{ scale: 1.7, opacity: 0 }}
-          transition={{ duration: 0.55, ease: "easeOut" }}
+          transition={{ duration: 0.75, ease: "easeOut" }}
           className="pointer-events-none absolute inset-0 rounded-[0.95rem] border-2"
           style={{ borderColor: litColor(index) }}
         />
       )}
     </motion.div>
   );
-};
+});
+Key.displayName = "Key";
 
 /**
  * Intro: a little mechanical keyboard drops in, types out the name key by key (each key lights
  * up in the theme colours), hits Enter, and the keys launch upward as the screen wipes away in
  * colourful columns, handing over to the hero where 3D keycaps fall into place.
  */
-const Loader = ({ onDone }: { onDone: () => void }) => {
+interface LoaderProps {
+  /** Called once the name is typed: time to mount the site underneath while the loader still covers it. */
+  onReady: () => void;
+  /** Called when the intro has finished playing. */
+  onDone: () => void;
+}
+
+const Loader = ({ onReady, onDone }: LoaderProps) => {
   const reduceMotion = useReducedMotion();
   const [elapsed, setElapsed] = useState(0);
   const speed = reduceMotion ? 0.45 : 1;
+  const callbacks = useRef({ onReady, onDone });
+  callbacks.current = { onReady, onDone };
 
   useEffect(() => {
     let raf = 0;
-    let timer = 0;
+    let ready = false;
     const start = performance.now();
     const tick = (now: number) => {
       const t = (now - start) / speed;
       setElapsed(t);
+      if (!ready && t >= T.mount) {
+        ready = true;
+        callbacks.current.onReady();
+      }
       if (t < T.done) raf = requestAnimationFrame(tick);
-      else timer = window.setTimeout(onDone, 60);
+      else callbacks.current.onDone();
     };
     raf = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.clearTimeout(timer);
-    };
-  }, [onDone, speed]);
+    return () => cancelAnimationFrame(raf);
+  }, [speed]);
 
-  const typed = Math.max(0, Math.min(KEY_COUNT, Math.floor((elapsed - T.typeStart) / T.typeGap) + 1));
+  const typed = KEY_TIMES.filter((time) => elapsed >= time).length;
   const pressingIndex = typed - 1;
-  const pressing = pressingIndex >= 0 && elapsed - (T.typeStart + pressingIndex * T.typeGap) < 95;
+  const pressing = pressingIndex >= 0 && elapsed - KEY_TIMES[pressingIndex] < PRESS_MS;
   const enterVisible = elapsed >= T.enterIn;
   const enterPressed = elapsed >= T.enterPress;
   const raw = Math.min(1, elapsed / T.enterPress);
@@ -229,7 +248,7 @@ const Loader = ({ onDone }: { onDone: () => void }) => {
             <span className="font-bold tabular-nums text-foreground">{progress}%</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-            <div className="bg-candy h-full rounded-full" style={{ width: `${progress}%` }} />
+            <div className="bg-candy h-full rounded-full transition-[width] duration-150 ease-out" style={{ width: `${progress}%` }} />
           </div>
         </motion.div>
       </motion.div>
