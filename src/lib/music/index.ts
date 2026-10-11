@@ -3,10 +3,11 @@ import type { NightShift } from "./engine";
 
 /**
  * Site audio controller: background music plus the intro's sound effects. Browsers only allow
- * audio after the visitor interacts with the page. During the intro, that first key press / tap
- * just unlocks audio (the keyboard then types with sound) and the music fades in when the home
- * page is revealed; afterwards the first interaction starts the music directly. Music fades in
- * and out, pauses while the tab is hidden, and the visitor's mute choice is remembered.
+ * audio once the visitor has interacted with the page (unless their browser allows autoplay).
+ * The intro tries to start audio straight away and otherwise unlocks it on the first key press /
+ * tap, then the music fades in when the home page is revealed; after the intro, the first
+ * interaction starts the music directly. Music fades in and out, pauses while the tab is hidden,
+ * and the visitor's mute choice is remembered.
  */
 
 const STORAGE_KEY = "portfolio-music";
@@ -19,6 +20,8 @@ interface MusicState {
   enabled: boolean;
   /** Audio is actually playing right now. */
   playing: boolean;
+  /** The browser has let audio start (needs a user interaction, unless autoplay is allowed). */
+  unlocked: boolean;
 }
 
 const readPref = () => {
@@ -37,7 +40,7 @@ const writePref = (value: "on" | "off") => {
   }
 };
 
-let state: MusicState = { enabled: readPref() !== "off", playing: false };
+let state: MusicState = { enabled: readPref() !== "off", playing: false, unlocked: false };
 const listeners = new Set<() => void>();
 const setState = (patch: Partial<MusicState>) => {
   state = { ...state, ...patch };
@@ -70,6 +73,10 @@ function ensureContext() {
   const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) return null;
   ctx = new Ctor({ latencyHint: "playback" });
+  const context = ctx;
+  context.onstatechange = () => {
+    if (context.state === "running" && !state.unlocked) setState({ unlocked: true });
+  };
   master = ctx.createGain();
   master.gain.value = 0;
   analyser = ctx.createAnalyser();
@@ -152,8 +159,9 @@ export function soundEnabled() {
 }
 
 /**
- * Create / resume the audio context from inside a user gesture without starting the music, and
- * warm up the synth so the music can start instantly later. Returns whether audio is running.
+ * Create / resume the audio context without starting the music (works straight away if the
+ * browser allows autoplay, otherwise from inside a user gesture), and warm up the synth so the
+ * music can start instantly later. Returns whether audio is running.
  */
 export function unlockAudio() {
   if (!state.enabled) return false;
