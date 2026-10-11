@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ModeToggle } from "@/components/mode-toggle";
 import ThemePicker from "@/components/ThemePicker";
 import MobileMenu from "@/components/MobileMenu";
+import SoundToggle from "@/components/SoundToggle";
 import { MenuToggle } from "@/components/ui/menu-toggle";
 import { MOBILE_MENU_ID, NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
@@ -106,6 +107,7 @@ const Navbar = () => {
           </ul>
 
           <div className="flex items-center gap-2">
+            <SoundToggle />
             {/* On phones these live in the menu footer instead */}
             <div className="hidden items-center gap-2 sm:flex">
               <ThemePicker />
