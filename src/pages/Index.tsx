@@ -19,6 +19,11 @@ import SmoothScroll from "@/components/SmoothScroll";
 import BackToTop from "@/components/BackToTop";
 import { IntroContext } from "@/lib/intro";
 import { lenisRef } from "@/lib/lenis";
+import { playSfx, setIntroActive } from "@/lib/music";
+import { chime, whoosh } from "@/lib/music/sfx";
+
+/** The music fades in this long after the reveal starts, once the whoosh has done its thing */
+const MUSIC_AFTER_REVEAL_MS = 900;
 
 const Stage3D = lazy(() => import("@/components/three/Stage3D"));
 
@@ -113,6 +118,15 @@ const Index = () => {
     return () => {
       root.style.overflow = previous;
     };
+  }, [loading]);
+
+  // Reveal sounds: a whoosh as the columns lift, a chime as the name types in, then the music
+  useEffect(() => {
+    if (loading) return;
+    playSfx(whoosh, 0.15);
+    playSfx(chime, 0.6);
+    const timer = window.setTimeout(() => setIntroActive(false), MUSIC_AFTER_REVEAL_MS);
+    return () => window.clearTimeout(timer);
   }, [loading]);
 
   useEffect(() => {
