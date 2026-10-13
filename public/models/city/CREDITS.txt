@@ -1,0 +1,3 @@
+City Kit (Commercial) 2.1 by Kenney (www.kenney.nl)
+License: Creative Commons CC0 1.0 (public domain) - https://creativecommons.org/publicdomain/zero/1.0/
+16 of the kit's buildings, merged into city.glb and compressed (meshopt) with gltf-transform.

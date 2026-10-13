@@ -361,3 +361,24 @@ export function skyTexture(variant: "night" | "day" = "day") {
     ctx.fillRect(0, 0, 4, 256);
   });
 }
+
+/** The avenue seen along its length: asphalt with dashed centre lines and solid edges (repeats along u). */
+export function avenueTexture(variant: "night" | "day") {
+  const texture = canvasTexture(512, 128, (ctx) => {
+    ctx.fillStyle = variant === "night" ? "#10171a" : "#6f777b";
+    ctx.fillRect(0, 0, 512, 128);
+    ctx.fillStyle = variant === "night" ? "rgba(235,240,240,0.55)" : "rgba(255,255,255,0.9)";
+    ctx.fillRect(0, 6, 512, 3);
+    ctx.fillRect(0, 119, 512, 3);
+    for (let x = 0; x < 512; x += 64) {
+      ctx.fillRect(x, 44, 36, 3);
+      ctx.fillRect(x, 81, 36, 3);
+    }
+    ctx.fillStyle = variant === "night" ? "rgba(255,200,120,0.6)" : "rgba(255,220,120,0.95)";
+    ctx.fillRect(0, 62, 512, 2);
+    ctx.fillRect(0, 66, 512, 2);
+  });
+  texture.wrapS = THREE.RepeatWrapping;
+  return texture;
+}
+

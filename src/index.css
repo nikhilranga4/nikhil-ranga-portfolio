@@ -296,42 +296,18 @@
       inset 0 1px 0 rgb(255 255 255 / 0.06),
       inset 0 0 0 1px hsl(var(--brand-1) / 0.12);
   }
-  /* The slab's shadow on the ground below it (FallIn animates it as the slab falls) */
+  /*
+   * The slab's soft shadow on the ground below it (FallIn animates it as the slab settles). A
+   * radial gradient rather than a blur filter: blurred layers composited over the moving WebGL
+   * scene were halving the frame rate on integrated GPUs.
+   */
   .fall-shadow {
-    background: rgb(15 40 60 / 0.45);
-    filter: blur(28px);
+    background: radial-gradient(closest-side, rgb(15 40 60 / 0.4), rgb(15 40 60 / 0.18) 60%, transparent);
     transform: translate(0, 18px);
     opacity: 0.6;
   }
   .dark .fall-shadow {
-    background: rgb(0 0 0 / 0.8);
-  }
-  /*
-   * Seen from the camera above, a slab leans in perspective as it slides into and out of view
-   * and lies flat while it's being read. Scroll-driven CSS (no JS); browsers without scroll
-   * timelines simply keep it flat.
-   */
-  @supports (animation-timeline: view()) {
-    @media (prefers-reduced-motion: no-preference) {
-      .fall-tilt {
-        animation: fall-tilt linear both;
-        animation-timeline: view();
-      }
-    }
-  }
-  @keyframes fall-tilt {
-    entry 0% {
-      transform: perspective(1600px) rotateX(18deg) scale(0.93);
-    }
-    entry 45% {
-      transform: none;
-    }
-    exit 55% {
-      transform: none;
-    }
-    exit 100% {
-      transform: perspective(1600px) rotateX(-14deg) scale(0.95);
-    }
+    background: radial-gradient(closest-side, rgb(0 0 0 / 0.75), rgb(0 0 0 / 0.35) 60%, transparent);
   }
 
   /* Edge flash when a slab lands */
@@ -368,14 +344,26 @@
     backdrop-filter: blur(18px) saturate(160%);
   }
 
-  /* Each theme ships its own gradient style (chrome, tropical sweep, ink-to-vermilion) */
+  /*
+   * Each theme ships its own gradient style (chrome, tropical sweep, ink-to-vermilion). The sweep
+   * only runs on hover: gradients aren't compositable, so an always-running sweep repaints every
+   * frame (on top of the 3D world behind the page that was most of the GPU's time).
+   */
   .text-gradient {
     background-image: var(--grad-text);
     background-size: 160% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: gradient-x 6s ease infinite;
+    animation: gradient-x 6s ease infinite paused;
+  }
+  .animate-gradient-x {
+    animation-play-state: paused;
+  }
+  .text-gradient:hover,
+  .animate-gradient-x:hover,
+  :hover > .text-gradient {
+    animation-play-state: running;
   }
 
   .bg-candy {
@@ -408,13 +396,17 @@
     mask-composite: exclude;
     opacity: 0;
     transition: opacity 0.4s ease;
-    animation: border-spin 4s linear infinite;
+    animation: border-spin 4s linear infinite paused;
     pointer-events: none;
     z-index: 1;
   }
   .gradient-border:hover::before,
   .gradient-border.is-active::before {
     opacity: 1;
+  }
+  /* Spins only under the pointer (a still border otherwise: no repaint every frame) */
+  .gradient-border:hover::before {
+    animation-play-state: running;
   }
 
   .chip {

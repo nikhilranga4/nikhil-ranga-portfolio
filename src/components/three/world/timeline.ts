@@ -54,14 +54,14 @@ export const SCROLL = {
 /** World units fallen per viewport height scrolled after the hero */
 export const FALL_PER_VH = 6;
 /**
- * World units the camera glides along the avenue per viewport scrolled. Looking straight down with
- * the top of the screen toward the tower we fell from, gliding away from it makes the city below
- * move up the screen in step with the page.
+ * World units the camera drifts along the tower's face per viewport scrolled, so the city opens
+ * up past the tower's corner as we fall.
  */
-export const FALL_FORWARD_PER_VH = 2.6;
-/** Where the free fall begins: just under the broken glass floor */
+export const FALL_DRIFT_PER_VH = 1.4;
+/** Where the free fall begins: just under the broken glass floor, outside the tower's face */
 export const FALL_START_Y = -3.2;
-export const FALL_START_Z = -4.7;
+export const FALL_START_X = -1.5;
+export const FALL_START_Z = -4.6;
 
 export interface WorldState {
   /** Seconds since the intro started (Infinity once skipped / finished, -1 before it starts) */
@@ -110,8 +110,8 @@ export function flicker(t: number, seed = 0) {
 
 /** Viewports of scroll over which the fall slows to a stop at street level */
 const LANDING = 1.3;
-/** Camera height above the street once landed (it ends looking down on the street and rooftops) */
-export const EYE_HEIGHT = 22;
+/** Camera height above the street once landed (a little above the street lights) */
+export const EYE_HEIGHT = 6;
 
 /**
  * Fall depth in viewports, eased at the very end of the page so the camera decelerates and
@@ -130,8 +130,8 @@ export function fallDepth(fall: number, fallMax: number): [number, number] {
 /** Camera height for a fall position (world units) */
 export const fallCameraY = (fall: number, fallMax: number) => FALL_START_Y - FALL_PER_VH * fallDepth(fall, fallMax)[0];
 
-/** Camera position along the avenue for a fall position (world units, moving away from the tower) */
-export const fallCameraZ = (fall: number, fallMax: number) => FALL_START_Z - FALL_FORWARD_PER_VH * fallDepth(fall, fallMax)[0];
+/** Camera drift along the tower's face for a fall position (world units) */
+export const fallCameraX = (fall: number, fallMax: number) => FALL_START_X + FALL_DRIFT_PER_VH * fallDepth(fall, fallMax)[0];
 
 /** Street level: where the camera comes to rest at the end of the page, minus eye height */
 export const streetLevel = (fallMax: number) => fallCameraY(Infinity, fallMax) - EYE_HEIGHT;

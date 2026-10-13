@@ -1,9 +1,55 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { sharedMatcap } from "./keycap";
 import { FALL_PER_VH, fallBlend, fallCameraY, streetLevel, type WorldState } from "./timeline";
-import { radialTexture, skyTexture, streetTexture, windowsTexture } from "./textures";
+import { avenueTexture, radialTexture } from "./textures";
+
+/** Kenney City Kit (Commercial), CC0: 16 buildings merged into one compressed file */
+const CITY_URL = "/models/city/city.glb";
+/** Poly Haven skies (CC0), graded to JPG */
+const SKY_URLS = ["/sky/sky-night.jpg", "/sky/sky-day.jpg"];
+/** Kenney units → world units */
+const KIT_SCALE = 11;
+
+/** Footprints (Kenney units) of the buildings we place: [width, depth, height] */
+const KIT = {
+  "building-skyscraper-a": [1.36, 1.36, 2.88],
+  "building-skyscraper-b": [1.36, 1.36, 4.48],
+  "building-skyscraper-c": [1.28, 1.39, 4.08],
+  "building-skyscraper-d": [1.28, 1.39, 5.47],
+  "building-skyscraper-e": [1.29, 1.24, 4.08],
+  "building-f": [0.84, 1.03, 1.69],
+  "building-g": [0.97, 0.92, 1.69],
+  "building-i": [1.24, 1.3, 1.68],
+  "building-l": [1.37, 1.4, 2.27],
+  "building-m": [1.24, 1.24, 3.15],
+  "low-detail-building-a": [0.5, 0.5, 2.0],
+  "low-detail-building-b": [0.5, 0.5, 2.23],
+  "low-detail-building-c": [0.5, 0.5, 2.25],
+  "low-detail-building-f": [0.5, 0.5, 2.0],
+  "low-detail-building-h": [0.5, 0.5, 2.1],
+  "low-detail-building-wide-a": [1.0, 0.5, 1.1],
+} as const;
+type Kind = keyof typeof KIT;
+
+const NEAR: Kind[] = ["building-skyscraper-a", "building-skyscraper-b", "building-skyscraper-c", "building-skyscraper-d", "building-skyscraper-e", "building-l", "building-m"];
+const MID: Kind[] = ["building-f", "building-g", "building-i", "building-l", "building-m", "building-skyscraper-a", "building-skyscraper-e"];
+const FAR: Kind[] = ["low-detail-building-a", "low-detail-building-b", "low-detail-building-c", "low-detail-building-f", "low-detail-building-h", "low-detail-building-wide-a"];
+
+/** The avenue runs along +x in front of the tower; its kerbs are at these z values */
+const AVENUE = { north: -2.5, south: -15.5 };
+
+interface Placement {
+  kind: Kind;
+  x: number;
+  z: number;
+  rot: number;
+  scale: number;
+  /** Non-uniform scale override (our tower) */
+  stretch?: [number, number, number];
+}
 
 /** Small deterministic random for the city layout. */
 function rng(seed: number) {
@@ -14,39 +60,39 @@ function rng(seed: number) {
   };
 }
 
-/** Wrap `v` into [-range/2, range/2) */
-const wrap = (v: number, range: number) => ((((v + range / 2) % range) + range) % range) - range / 2;
-
-interface Tower {
-  x: number;
-  z: number;
-  w: number;
-  d: number;
-  top: number;
-}
-
 /**
- * A wide avenue running out from under the room: a front row of towers either side, a taller row
- * behind it, and a far skyline, so the fall has sky and depth rather than two walls of windows.
+ * Rows of buildings either side of the avenue (with cross streets), a second row behind each,
+ * and a ring of low-detail towers for the skyline.
  */
-function cityLayout(): Tower[] {
-  const rand = rng(5);
-  // The tower we fell from (the room hangs off its face), seen at the top of the screen
-  const towers: Tower[] = [{ x: 0, z: 15.2, w: 30, d: 30, top: -0.4 }];
-  for (const side of [-1, 1]) {
-    for (let z = -12; z > -170; z -= 13 + rand() * 9) {
-      towers.push({ x: side * (16 + rand() * 7), z, w: 6 + rand() * 4, d: 6 + rand() * 5, top: -10 + rand() * 40 });
+function cityLayout(): Placement[] {
+  const rand = rng(11);
+  const out: Placement[] = [];
+  const row = (kinds: Kind[], fromX: number, toX: number, frontZ: number, side: 1 | -1, scale: number) => {
+    let x = fromX;
+    let count = 0;
+    while (x < toX) {
+      const kind = kinds[Math.floor(rand() * kinds.length)];
+      const [w, d] = KIT[kind];
+      const s = scale * (0.9 + rand() * 0.25);
+      const halfW = (w * KIT_SCALE * s) / 2;
+      x += halfW;
+      out.push({ kind, x, z: frontZ + side * ((d * KIT_SCALE * s) / 2), rot: side > 0 ? Math.PI : 0, scale: s });
+      x += halfW + 2 + rand() * 5;
+      if (++count % 4 === 0) x += 16; // cross street
     }
-    for (let z = -30; z > -190; z -= 18 + rand() * 12) {
-      towers.push({ x: side * (34 + rand() * 14), z, w: 9 + rand() * 6, d: 9 + rand() * 6, top: 10 + rand() * 55 });
-    }
+  };
+  row(NEAR, 14, 270, 2.5, 1, 1);
+  row(NEAR, -40, 270, AVENUE.south - 3, -1, 1);
+  row(MID, -60, 280, 30, 1, 1.05);
+  row(MID, -70, 280, -46, -1, 1.05);
+  // Skyline ring
+  for (let i = 0; i < 46; i++) {
+    const a = -Math.PI * 0.95 + rand() * Math.PI * 1.9;
+    const r = 150 + rand() * 110;
+    const kind = FAR[Math.floor(rand() * FAR.length)];
+    out.push({ kind, x: 90 + Math.cos(a) * r, z: -10 + Math.sin(a) * r, rot: Math.floor(rand() * 4) * (Math.PI / 2), scale: 1.2 + rand() * 0.8 });
   }
-  for (let i = 0; i < 26; i++) {
-    const a = -Math.PI / 2 + (rand() - 0.5) * 2.4;
-    const r = 150 + rand() * 90;
-    towers.push({ x: Math.cos(a) * r * 0.9, z: Math.sin(a) * r, w: 10 + rand() * 14, d: 10 + rand() * 14, top: 10 + rand() * 70 });
-  }
-  return towers;
+  return out;
 }
 
 interface FallSceneProps {
@@ -57,71 +103,105 @@ interface FallSceneProps {
 }
 
 /**
- * Everything outside the building for the free fall: towers lining the avenue below, the street
- * we land on, glass debris and wind streaks around the camera, clouds, and a day sky. All of it
- * uses unlit materials and instancing (a handful of draw calls); night/day swap textures and
- * colours on the same materials, so a theme change never recompiles a shader.
+ * The city for the free fall, built from real models (Kenney City Kit, CC0) and lit by real skies
+ * (Poly Haven, CC0): instanced buildings lining the avenue (one draw call per model), the tower we
+ * fell from, a sun or moon, and at night warm window and street lights. Night/day swap textures and
+ * light levels on the same materials, so a theme change never recompiles a shader.
  */
 export function FallScene({ world, neonA, lite }: FallSceneProps) {
-  const camera = useThree((s) => s.camera);
-  const tex = useMemo(
-    () => ({
-      winNight: windowsTexture("night"),
-      winDay: windowsTexture("day"),
-      streetNight: streetTexture("night"),
-      streetDay: streetTexture("day"),
-      sky: skyTexture("day"),
-      skyNight: skyTexture("night"),
-      puff: radialTexture("rgba(255,255,255,0.85)", "rgba(255,255,255,0)"),
-    }),
-    []
-  );
-  useEffect(() => {
-    tex.winNight.repeat.set(1, 6);
-    tex.winDay.repeat.set(1, 6);
-    for (const t of [tex.streetNight, tex.streetDay]) {
-      t.wrapS = t.wrapT = THREE.RepeatWrapping;
-      t.repeat.set(3, 5);
+  const { gl, scene, camera } = useThree();
+  const gltf = useGLTF(CITY_URL);
+  // Each building is its own scene in the merged file, so index meshes across all scenes
+  const { nodes, materials } = useMemo(() => {
+    const meshes: Record<string, THREE.Mesh> = {};
+    const mats: Record<string, THREE.MeshStandardMaterial> = {};
+    for (const sc of gltf.scenes) {
+      sc.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh) return;
+        // The loader de-duplicates names ("building-f_1"): key by the original name
+        meshes[m.name.replace(/_\d+$/, "")] = m;
+        const mat = m.material as THREE.MeshStandardMaterial;
+        mats[mat.name || "colormap"] = mat;
+      });
     }
-    return () => Object.values(tex).forEach((t) => t.dispose());
+    return { nodes: meshes, materials: mats };
+  }, [gltf]);
+  const [skyNight, skyDay] = useTexture(SKY_URLS);
+
+  // One material for the whole city (the kit shares a single colour-map texture). Lambert, not
+  // PBR: the kit is flat-shaded anyway, and it keeps a screen full of buildings cheap on
+  // integrated GPUs. The colour map doubles as an emissive map so the city glows at night.
+  const cityMaterial = useMemo(() => {
+    const map = (materials.colormap ?? Object.values(materials)[0]).map;
+    return new THREE.MeshLambertMaterial({ map, emissiveMap: map, emissive: new THREE.Color(0, 0, 0) });
+  }, [materials]);
+  useEffect(() => () => cityMaterial.dispose(), [cityMaterial]);
+
+  const tex = useMemo(() => ({ avenueNight: avenueTexture("night"), avenueDay: avenueTexture("day"), puff: radialTexture("rgba(255,255,255,0.85)", "rgba(255,255,255,0)") }), []);
+  useEffect(() => {
+    for (const t of [tex.avenueNight, tex.avenueDay]) t.repeat.set(70, 1);
+    return () => {
+      tex.avenueNight.dispose();
+      tex.avenueDay.dispose();
+      tex.puff.dispose();
+    };
   }, [tex]);
+
+  // Image-based lighting from the skies (prefiltered once). Set before the up-front shader compile.
+  const envs = useMemo(() => {
+    for (const t of [skyNight, skyDay]) {
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.mapping = THREE.EquirectangularReflectionMapping;
+    }
+    const pm = new THREE.PMREMGenerator(gl);
+    const out = { night: pm.fromEquirectangular(skyNight).texture, day: pm.fromEquirectangular(skyDay).texture };
+    pm.dispose();
+    return out;
+  }, [gl, skyNight, skyDay]);
+  useLayoutEffect(() => {
+    scene.environment = envs.night;
+    scene.environmentIntensity = 0.3;
+    return () => {
+      scene.environment = null;
+      envs.night.dispose();
+      envs.day.dispose();
+    };
+  }, [scene, envs]);
 
   const mats = useMemo(
     () => ({
-      towers: new THREE.MeshBasicMaterial({ map: tex.winNight }),
-      roofs: new THREE.MeshBasicMaterial({ color: "#0c1416" }),
-      street: new THREE.MeshBasicMaterial({ map: tex.streetNight }),
+      ground: new THREE.MeshLambertMaterial({ color: "#0f1518" }),
+      avenue: new THREE.MeshLambertMaterial({ map: tex.avenueNight }),
+      kerb: new THREE.MeshLambertMaterial({ color: "#2a3134" }),
+      lights: new THREE.PointsMaterial({ map: tex.puff, size: 2.8, sizeAttenuation: true, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }),
       debris: new THREE.MeshMatcapMaterial({ matcap: sharedMatcap(), color: new THREE.Color(neonA).lerp(new THREE.Color("#d8f4f1"), 0.7), transparent: true, opacity: 0.55, side: THREE.DoubleSide }),
       wind: new THREE.LineBasicMaterial({ color: "#cdeeea", transparent: true, opacity: 0, depthWrite: false }),
       cloud: new THREE.SpriteMaterial({ map: tex.puff, color: "#ffffff", transparent: true, opacity: 0, depthWrite: false }),
-      sun: new THREE.SpriteMaterial({ map: tex.puff, color: "#fff1d2", transparent: true, opacity: 0, depthWrite: false, fog: false, blending: THREE.AdditiveBlending }),
-      sky: new THREE.MeshBasicMaterial({ map: tex.sky, side: THREE.BackSide, transparent: true, opacity: 0, depthWrite: false, fog: false }),
+      sky: new THREE.MeshBasicMaterial({ map: skyNight, side: THREE.BackSide, transparent: true, opacity: 0, depthWrite: false, fog: false }),
     }),
-    [tex, neonA]
+    [tex, neonA, skyNight]
   );
   useEffect(() => () => Object.values(mats).forEach((m) => m.dispose()), [mats]);
 
-  const box = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
-  const roofGeo = useMemo(() => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), []);
-  useEffect(() => () => roofGeo.dispose(), [roofGeo]);
-  const shardGeo = useMemo(() => new THREE.CylinderGeometry(0.22, 0.22, 0.02, 3), []);
-  useEffect(
-    () => () => {
-      box.dispose();
-      shardGeo.dispose();
-    },
-    [box, shardGeo]
-  );
-
   const layout = useMemo(cityLayout, []);
-  const debrisCount = lite ? 22 : 46;
-  const windCount = lite ? 50 : 110;
+  const byKind = useMemo(() => {
+    const groups = new Map<Kind, Placement[]>();
+    // The tower we fell from: a real skyscraper, stretched to reach the street
+    groups.set("building-skyscraper-c", [{ kind: "building-skyscraper-c", x: 0, z: 7.7, rot: 0, scale: 1, stretch: [15 / 1.28, 1, 15 / 1.39] }]);
+    for (const p of layout) groups.set(p.kind, [...(groups.get(p.kind) ?? []), p]);
+    return [...groups.entries()];
+  }, [layout]);
+
+  const shardGeo = useMemo(() => new THREE.CylinderGeometry(0.22, 0.22, 0.02, 3), []);
+  useEffect(() => () => shardGeo.dispose(), [shardGeo]);
+  const debrisCount = lite ? 20 : 40;
+  const windCount = lite ? 50 : 100;
   const debris = useMemo(() => {
     const rand = rng(31);
-    // Around and below the camera; they fall faster than we do, shrinking away toward the street
     return Array.from({ length: debrisCount }, () => ({
       x: (rand() - 0.5) * 14,
-      z: (rand() - 0.5) * 14,
+      z: -2 - rand() * 12,
       y: rand() * 22,
       speed: 0.5 + rand() * 0.6,
       spin: new THREE.Vector3((rand() - 0.5) * 3, (rand() - 0.5) * 3, (rand() - 0.5) * 3),
@@ -130,7 +210,7 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
   }, [debrisCount]);
   const windSeeds = useMemo(() => {
     const rand = rng(43);
-    return Array.from({ length: windCount }, () => ({ x: (rand() - 0.5) * 16, z: (rand() - 0.5) * 16, y: rand() * 22, len: 0.5 + rand() * 1.3 }));
+    return Array.from({ length: windCount }, () => ({ x: rand() * 18 - 4, z: -2 - rand() * 14, y: rand() * 22, len: 0.5 + rand() * 1.3 }));
   }, [windCount]);
   const windGeo = useMemo(() => {
     const g = new THREE.BufferGeometry();
@@ -139,54 +219,81 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
   }, [windCount]);
   useEffect(() => () => windGeo.dispose(), [windGeo]);
 
+  // City lights at night: street lamps along both kerbs and windows on the avenue-facing walls
+  const lightCount = lite ? 260 : 520;
+  const lightsGeo = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(new Float32Array(lightCount * 3), 3));
+    g.setAttribute("color", new THREE.Float32BufferAttribute(new Float32Array(lightCount * 3), 3));
+    return g;
+  }, [lightCount]);
+  useEffect(() => () => lightsGeo.dispose(), [lightsGeo]);
+
   const root = useRef<THREE.Group>(null);
-  const towers = useRef<THREE.InstancedMesh>(null);
-  const roofs = useRef<THREE.InstancedMesh>(null);
-  const street = useRef<THREE.Mesh>(null);
+  const instRefs = useRef(new Map<Kind, THREE.InstancedMesh>());
   const debrisMesh = useRef<THREE.InstancedMesh>(null);
   const near = useRef<THREE.Group>(null);
   const clouds = useRef<THREE.Group>(null);
-  const sun = useRef<THREE.Sprite>(null);
   const sky = useRef<THREE.Mesh>(null);
+  const sun = useRef<THREE.DirectionalLight>(null);
+  const skyLight = useRef<THREE.HemisphereLight>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  const state = useRef({ street: NaN, mode: "" as string, travel: 0 });
+  const place = useMemo(() => new THREE.Matrix4(), []);
+  const state = useRef({ street: NaN, mode: "" as string });
 
-  // Towers stand on the street, so they're rebuilt whenever the page length moves the street
-  const placeTowers = (streetY: number) => {
-    const mesh = towers.current;
-    if (!mesh) return;
-    layout.forEach((t, i) => {
-      const height = t.top - streetY;
-      dummy.position.set(t.x, streetY + height / 2, t.z);
-      dummy.rotation.set(0, 0, 0);
-      dummy.scale.set(t.w, height, t.d);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.computeBoundingSphere();
+  /** Everything stands on the street, so it's re-placed when the page length moves the street. */
+  const build = (streetY: number) => {
+    for (const [kind, list] of byKind) {
+      const mesh = instRefs.current.get(kind);
+      const node = nodes[kind];
+      if (!mesh || !node) continue;
+      // Compressed (quantised) meshes carry a correcting transform on their node: keep it
+      node.updateMatrix();
+      list.forEach((p, i) => {
+        dummy.position.set(p.x, streetY, p.z);
+        dummy.rotation.set(0, p.rot, 0);
+        if (p.stretch) dummy.scale.set(p.stretch[0], (-0.4 - streetY) / KIT[kind][2], p.stretch[2]);
+        else dummy.scale.setScalar(p.scale * KIT_SCALE);
+        dummy.updateMatrix();
+        place.multiplyMatrices(dummy.matrix, node.matrix);
+        mesh.setMatrixAt(i, place);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+    }
+
+    const rand = rng(91);
+    const pos = lightsGeo.attributes.position as THREE.BufferAttribute;
+    const col = lightsGeo.attributes.color as THREE.BufferAttribute;
+    const warm = new THREE.Color("#ffc58a");
+    const teal = new THREE.Color(neonA).lerp(new THREE.Color("#ffffff"), 0.2);
+    const lamp = new THREE.Color("#ffd9a0");
+    let n = 0;
+    // Street lamps
+    for (let x = -30; x < 260 && n < lightCount - 1; x += 9) {
+      for (const z of [AVENUE.north - 0.6, AVENUE.south + 0.6]) {
+        pos.setXYZ(n, x, streetY + 4.2, z);
+        col.setXYZ(n, lamp.r * 1.4, lamp.g * 1.4, lamp.b * 1.4);
+        n++;
+      }
+    }
+    // Lit windows on the walls facing the avenue
+    const lit = layout.filter((p) => !p.kind.startsWith("low-detail"));
+    while (n < lightCount) {
+      const p = lit[Math.floor(rand() * lit.length)];
+      const [w, d, h] = KIT[p.kind];
+      const s = p.scale * KIT_SCALE;
+      const faceZ = p.z + (p.rot === 0 ? d * s * 0.5 + 0.25 : -(d * s * 0.5 + 0.25));
+      const c = rand() < 0.7 ? warm : teal;
+      const k = 0.5 + rand() * 0.6;
+      pos.setXYZ(n, p.x + (rand() - 0.5) * w * s * 0.8, streetY + (0.08 + rand() * 0.82) * h * s, faceZ);
+      col.setXYZ(n, c.r * k, c.g * k, c.b * k);
+      n++;
+    }
+    pos.needsUpdate = true;
+    col.needsUpdate = true;
+    lightsGeo.computeBoundingSphere();
   };
-  // Each tower a slightly different shade, so neighbours read as separate buildings. Set at
-  // mount (not on the first fall frame) so the shader variant is part of the up-front compile.
-  useLayoutEffect(() => {
-    const mesh = towers.current;
-    if (!mesh) return;
-    const tint = new THREE.Color();
-    layout.forEach((_, i) => mesh.setColorAt(i, tint.setScalar(0.6 + ((i * 37) % 11) / 18)));
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    // Flat roofs on top (seen from above, they read as roofs rather than more windows)
-    const r = roofs.current;
-    if (!r) return;
-    layout.forEach((t, i) => {
-      dummy.position.set(t.x, t.top + 0.03, t.z);
-      dummy.rotation.set(0, 0, 0);
-      dummy.scale.set(t.w, 1, t.d);
-      dummy.updateMatrix();
-      r.setMatrixAt(i, dummy.matrix);
-    });
-    r.instanceMatrix.needsUpdate = true;
-    r.computeBoundingSphere();
-  }, [layout, dummy]);
 
   useFrame(() => {
     const w = world.current;
@@ -197,44 +304,53 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
     const s = state.current;
 
     const streetY = streetLevel(w.fallMax);
-    // (NaN on the first frame, so the towers are always placed once)
+    // (NaN on the first frame, so the city is always placed once)
     if (!(Math.abs(streetY - s.street) <= 0.01)) {
       s.street = streetY;
-      placeTowers(streetY);
-      street.current?.position.setY(streetY);
+      build(streetY);
     }
 
-    // Night ↔ day: swap maps and tints on the same materials (no recompile)
-    const mode = day > 0.5 ? "day" : "night";
+    // Night ↔ day: swap the sky, its lighting and a few tints (no recompile)
+    const isDay = day > 0.5;
+    const mode = isDay ? "day" : "night";
     if (mode !== s.mode) {
       s.mode = mode;
-      mats.towers.map = mode === "day" ? tex.winDay : tex.winNight;
-      mats.roofs.color.set(mode === "day" ? "#a7b3ba" : "#0c1416");
-      mats.street.map = mode === "day" ? tex.streetDay : tex.streetNight;
-      mats.sky.map = mode === "day" ? tex.sky : tex.skyNight;
-      mats.towers.needsUpdate = mats.street.needsUpdate = mats.sky.needsUpdate = true;
+      mats.sky.map = isDay ? skyDay : skyNight;
+      mats.avenue.map = isDay ? tex.avenueDay : tex.avenueNight;
+      mats.ground.color.set(isDay ? "#7d878c" : "#0f1518");
+      mats.kerb.color.set(isDay ? "#b9c0c3" : "#2a3134");
+      mats.sky.needsUpdate = mats.avenue.needsUpdate = true;
+      scene.environment = isDay ? envs.day : envs.night;
     }
-    mats.cloud.color.set(day > 0.5 ? "#ffffff" : "#5d8a90");
-    // Night sky as soon as we're outside; the day sky takes over inside the cloud bank
+    scene.environmentIntensity = THREE.MathUtils.lerp(0.3, isDay ? 1.05 : 0.55, inFall);
+    if (sun.current) {
+      sun.current.intensity = inFall * (isDay ? 2.2 : 0.5);
+      sun.current.color.set(isDay ? "#fff0d8" : "#9cc2ff");
+    }
+    // Sky-tinted fill: bright blue-white by day, cool moonlit blue at night
+    if (skyLight.current) {
+      skyLight.current.intensity = inFall * (isDay ? 1.5 : 0.9);
+      skyLight.current.color.set(isDay ? "#e6f2ff" : "#46658a");
+      skyLight.current.groundColor.set(isDay ? "#7a8288" : "#0b0f14");
+    }
+    cityMaterial.emissive.setRGB(isDay ? 0 : 0.2 * inFall, isDay ? 0 : 0.17 * inFall, isDay ? 0 : 0.13 * inFall);
+    mats.lights.opacity = isDay ? 0 : inFall;
     mats.sky.opacity = inFall;
-    mats.sun.opacity = day * 0.9;
     if (sky.current) sky.current.position.copy(camera.position);
-    if (sun.current) sun.current.position.set(camera.position.x - 60, camera.position.y + 45, camera.position.z - 170);
 
-    // Clouds: a bank just under the room (thick in the day, a thin mist at night)
-    const camY = fallCameraY(w.fall, w.fallMax);
+    // Clouds: a bank just under the room (light mode drops through it into the day)
     if (clouds.current) clouds.current.position.set(camera.position.x, 0, camera.position.z);
-    mats.cloud.opacity = inFall * (day > 0.5 ? 0.6 : 0.14);
+    mats.cloud.color.set(isDay ? "#ffffff" : "#6d8f99");
+    mats.cloud.opacity = inFall * (isDay ? 0.55 : 0.1);
 
-    // Near-field: debris and wind ride along with the camera
+    // Near-field: glass debris dropping away below us, and wind streaks rushing past
+    const camY = fallCameraY(w.fall, w.fallMax);
     if (near.current) near.current.position.set(camera.position.x, camY, camera.position.z);
     const travel = w.fall * FALL_PER_VH;
-    s.travel = travel;
     const mesh = debrisMesh.current;
     if (mesh) {
       debris.forEach((d, i) => {
-        // Debris falls faster than we do: it drops away below, toward the street
-        const y = wrap(d.y - travel * d.speed, 22) - 6;
+        const y = ((((d.y - travel * d.speed) % 22) + 22) % 22) - 14;
         dummy.position.set(d.x, y, d.z);
         dummy.rotation.set(d.spin.x * travel, d.spin.y * travel, d.spin.z * travel);
         dummy.scale.setScalar(d.scale);
@@ -245,31 +361,42 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
     }
     const pos = windGeo.attributes.position as THREE.BufferAttribute;
     windSeeds.forEach((sd, i) => {
-      const y = wrap(sd.y + travel * 1.6, 22);
+      const y = ((((sd.y + travel * 1.6) % 22) + 22) % 22) - 11;
       pos.setXYZ(i * 2, sd.x, y, sd.z);
       pos.setXYZ(i * 2 + 1, sd.x, y + sd.len * (0.6 + Math.min(Math.abs(w.velocity), 3)), sd.z);
     });
     pos.needsUpdate = true;
-    mats.wind.opacity = inFall * Math.min(0.55, 0.12 + Math.abs(w.velocity) * 0.25) * (day > 0.5 ? 0.6 : 1);
+    mats.wind.opacity = inFall * Math.min(0.4, 0.08 + Math.abs(w.velocity) * 0.2) * (isDay ? 0.5 : 1);
     mats.debris.opacity = 0.55 * inFall;
   });
 
   const cloudPuffs = useMemo(() => {
     const rand = rng(77);
-    return Array.from({ length: lite ? 8 : 14 }, () => ({ x: (rand() - 0.5) * 22, y: -5 - rand() * 12, z: -3 - rand() * 18, s: 6 + rand() * 9 }));
+    return Array.from({ length: lite ? 8 : 14 }, () => ({ x: (rand() - 0.5) * 26 + 6, y: -6 - rand() * 12, z: -4 - rand() * 18, s: 7 + rand() * 9 }));
   }, [lite]);
 
   return (
     <group ref={root} visible={false}>
       <mesh ref={sky} material={mats.sky} renderOrder={-1}>
-        <sphereGeometry args={[380, 24, 16]} />
+        <sphereGeometry args={[380, 32, 16]} />
       </mesh>
-      <sprite ref={sun} material={mats.sun} scale={[60, 60, 1]} />
-      <instancedMesh ref={towers} args={[box, mats.towers, layout.length]} />
-      <instancedMesh ref={roofs} args={[roofGeo, mats.roofs, layout.length]} />
-      <mesh ref={street} material={mats.street} rotation={[-Math.PI / 2, 0, 0]} position={[0, -100, -90]}>
-        <planeGeometry args={[220, 320]} />
-      </mesh>
+      <directionalLight ref={sun} position={[-80, 140, -120]} intensity={0} />
+      <hemisphereLight ref={skyLight} args={["#e6f2ff", "#7a8288", 0]} />
+
+      {byKind.map(([kind, list]) => (
+        <instancedMesh
+          key={kind}
+          ref={(m) => {
+            if (m) instRefs.current.set(kind, m);
+            else instRefs.current.delete(kind);
+          }}
+          args={[nodes[kind]?.geometry, cityMaterial, list.length]}
+          frustumCulled={false}
+        />
+      ))}
+      <StreetLevel world={world} mats={mats} />
+      <points geometry={lightsGeo} material={mats.lights} frustumCulled={false} />
+
       <group ref={clouds}>
         {cloudPuffs.map((c, i) => (
           <sprite key={i} material={mats.cloud} position={[c.x, c.y, c.z]} scale={[c.s, c.s * 0.55, 1]} />
@@ -282,3 +409,30 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
     </group>
   );
 }
+
+/** Ground, avenue and kerbs, kept at the street's height (which depends on the page length). */
+function StreetLevel({ world, mats }: { world: MutableRefObject<WorldState>; mats: { ground: THREE.Material; avenue: THREE.Material; kerb: THREE.Material } }) {
+  const group = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (group.current) group.current.position.y = streetLevel(world.current.fallMax);
+  });
+  const avenueZ = (AVENUE.north + AVENUE.south) / 2;
+  const avenueW = AVENUE.north - AVENUE.south;
+  return (
+    <group ref={group}>
+      <mesh material={mats.ground} rotation={[-Math.PI / 2, 0, 0]} position={[100, -0.02, -10]}>
+        <planeGeometry args={[900, 900]} />
+      </mesh>
+      <mesh material={mats.avenue} rotation={[-Math.PI / 2, 0, 0]} position={[110, 0.01, avenueZ]}>
+        <planeGeometry args={[420, avenueW]} />
+      </mesh>
+      {[AVENUE.north + 1.5, AVENUE.south - 1.5].map((z) => (
+        <mesh key={z} material={mats.kerb} position={[110, 0.12, z]}>
+          <boxGeometry args={[420, 0.24, 3]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+useGLTF.preload(CITY_URL);

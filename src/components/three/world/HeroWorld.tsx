@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { MotionValue } from "framer-motion";
 import * as THREE from "three";
@@ -21,8 +21,10 @@ import {
   SCROLL,
   easeInOut,
   fallBlend,
+  FALL_START_Z,
+  fallCameraX,
   fallCameraY,
-  fallCameraZ,
+  fallDepth,
   smooth,
   span,
   type WorldState,
@@ -191,11 +193,12 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
     }
     const drop = easeInOut(span(w.progress, SCROLL.drop));
     const fallY = fallCameraY(w.fall, w.fallMax);
-    const fallZ = fallCameraZ(w.fall, w.fallMax);
-    tmp.fallPos.set(0, fallY, fallZ);
-    // Looking down from above: the street far below, towers converging around the avenue, and
-    // the top of the screen toward the tower we fell from
-    tmp.fallLook.set(0, fallY - 10, fallZ + 1.3);
+    const fallX = fallCameraX(w.fall, w.fallMax);
+    const [, landing] = fallDepth(w.fall, w.fallMax);
+    tmp.fallPos.set(fallX, fallY, FALL_START_Z);
+    // Falling beside the tower's face (on the right, its windows streaming up), looking out and
+    // down over the city; levelling out as we touch down on the avenue
+    tmp.fallLook.set(fallX + 10, fallY - 6.2 * (1 - landing) - 0.6 * landing, FALL_START_Z - 2.2);
     if (drop > 0) {
       tmp.pos.lerp(tmp.fallPos, drop);
       tmp.look.lerp(tmp.fallLook, drop);
@@ -244,7 +247,7 @@ const pointerTarget = new THREE.Vector2();
 function Atmosphere({ world }: { world: MutableRefObject<WorldState> }) {
   const scene = useThree((s) => s.scene);
   const c = useMemo(
-    () => ({ room: new THREE.Color(BG), night: new THREE.Color("#04111a"), day: new THREE.Color("#cfe3f0"), mix: new THREE.Color() }),
+    () => ({ room: new THREE.Color(BG), night: new THREE.Color("#0b1626"), day: new THREE.Color("#c9d8e4"), mix: new THREE.Color() }),
     []
   );
   useFrame(() => {
@@ -252,7 +255,8 @@ function Atmosphere({ world }: { world: MutableRefObject<WorldState> }) {
     c.mix.copy(c.room).lerp(c.night, inFall).lerp(c.day, day);
     if (scene.fog instanceof THREE.FogExp2) {
       scene.fog.color.copy(c.mix);
-      scene.fog.density = THREE.MathUtils.lerp(THREE.MathUtils.lerp(0.055, 0.016, inFall), 0.009, day);
+      // Thin haze over the city, so its depth reads without washing it out
+      scene.fog.density = THREE.MathUtils.lerp(THREE.MathUtils.lerp(0.055, 0.0065, inFall), 0.0045, day);
     }
     if (scene.background instanceof THREE.Color) scene.background.copy(c.mix);
   });
@@ -411,14 +415,17 @@ const HeroWorld = ({ progress, revealed, portrait, mode, reduceMotion, colors, o
       <Director world={world} revealed={revealed} onStage={onStage} />
       <Rig world={world} />
 
-      <Floor />
-      <Corridor world={world} neonA={neonA} neonB={neonB} />
-      <Room neonA={neonA} neonB={neonB} />
-      <GlassFloor world={world} neonA={neonA} count={lite ? 70 : 140} />
-      <FallScene world={world} neonA={neonA} lite={lite} />
-      <IntroKeyboard world={world} ramp={[colors.c1, colors.c2, colors.c3]} />
-      <FloatingKeys world={world} colors={colors} />
-      <Precompile onCompiled={() => setCompiled(true)} onReady={onReady} />
+      {/* Everything waits for the city model and skies (behind the boot screen), then compiles */}
+      <Suspense fallback={null}>
+        <Floor />
+        <Corridor world={world} neonA={neonA} neonB={neonB} />
+        <Room neonA={neonA} neonB={neonB} />
+        <GlassFloor world={world} neonA={neonA} count={lite ? 70 : 140} />
+        <FallScene world={world} neonA={neonA} lite={lite} />
+        <IntroKeyboard world={world} ramp={[colors.c1, colors.c2, colors.c3]} />
+        <FloatingKeys world={world} colors={colors} />
+        <Precompile onCompiled={() => setCompiled(true)} onReady={onReady} />
+      </Suspense>
     </Canvas>
   );
 };
