@@ -15,7 +15,7 @@ import { IntroKeyboard, KEYBOARD_POS } from "./IntroKeyboard";
 import { Precompile } from "./Precompile";
 import { RoadScene } from "./RoadScene";
 import { ROOM, Room } from "./Room";
-import { cameraPose } from "./route";
+import { cameraPose, glideEnd } from "./route";
 import {
   INTRO,
   KEY_TIMES,
@@ -26,7 +26,6 @@ import {
   STREET_Y,
   dropProgress,
   easeInOut,
-  landedAt,
   fallBlend,
   hoverHeight,
   smooth,
@@ -449,8 +448,7 @@ function useAutoDrop(world: MutableRefObject<WorldState>) {
       const breakY = at(SCROLL.shatter[0]);
       const roomY = at(SCROLL.crack[0] - 0.02);
       // The end of the glide: the first card a third of the way down the screen, its cab above it
-      const first = convoy.slots.get(0);
-      const landY = Math.max(landedAt(w), first?.width ? first.top - w.vh * 0.32 : 0);
+      const landY = glideEnd(w);
       let target: number | null = null;
       let duration = 0;
       if (dir > 0 && y >= breakY - 1 && y < landY - 4) {

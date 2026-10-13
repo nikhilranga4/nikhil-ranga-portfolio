@@ -1,16 +1,17 @@
 import { convoy } from "@/lib/convoy";
-import { CAMERA_DRIFT, ROAD, ROAD_HALF, ROAD_X0, landedAt, roadScale, type WorldState } from "./timeline";
+import { CAMERA_DRIFT, CARD_PLANE, ROAD, ROAD_HALF, ROAD_X0, hoverHeight, landedAt, roadScale, type WorldState } from "./timeline";
 
 /**
- * The avenue past the hero, turning a corner between every two sections: right, then left, then
- * right … (a staircase, so it can never double back on itself). Which way the first corner goes is
- * new on every visit.
+ * The avenue past the hero, turning a corner for every section: right, then left, then right …
+ * (a staircase, so it can never double back on itself). Which way the first corner goes is new on
+ * every visit.
  *
  * Positions along it are a distance `d`, measured along the straight legs (leg 0 starts at the
- * tower, where world x = d). The camera's distance follows the scroll through one knot per section
- * boundary, placed so each corner is taken while the gap between two cards crosses the middle of
- * the screen. The cards stay upright on screen, so the camera turns with the road and the city
- * swings round under the convoy.
+ * tower, where world x = d). The camera's distance follows the scroll through a pair of knots per
+ * turn, each turn taken as its section arrives: the first just after the glide down to the road,
+ * the rest while the gap above their card crosses the middle of the screen, and the name truck's
+ * early enough that it ends up on the straight beyond, between the buildings. The cards stay
+ * upright on screen, so the camera turns with the road and the city swings round under the convoy.
  */
 
 /** Where the road begins, behind the tower */
@@ -21,6 +22,10 @@ const MIN_LEG = 62;
 const TURN_WINDOW = 0.42;
 /** Radius the camera and the traffic turn on (about the junction's inner corner) */
 export const TURN_R = ROAD_HALF;
+/** Straight between the landing and the first corner (the tower stays clear of the junction) */
+const FIRST_STRAIGHT = 10;
+/** Width of the pavements: the junction and its pavements reach this far past the corner */
+const JUNCTION_REACH = ROAD_HALF + 4;
 /** Road kept beyond the end of the page */
 const RUN_OUT = 160;
 /** +1 = the first corner turns right, -1 = left (then they alternate) */
@@ -73,6 +78,12 @@ function smoothSlopes(knots: Knot[], cruise: number) {
   knots[n - 1].m = Math.min(cruise, 3 * secant(n - 2));
 }
 
+/** Where the glide down to the road ends: the first card a third of the way down the screen */
+export function glideEnd(w: WorldState) {
+  const first = convoy.slots.get(0);
+  return Math.max(landedAt(w), first?.width ? first.top - w.vh * 0.32 : 0);
+}
+
 export interface Route {
   legs: Leg[];
   /** Scroll position → camera distance */
@@ -102,28 +113,42 @@ function buildRoute(w: WorldState): Route {
   const slots = [...convoy.slots.values()].filter((s) => s.width > 0);
   slots.sort((a, b) => a.top - b.top);
   if (Number.isFinite(land)) {
-    // The gap above each section (after the first) crossing the middle of the screen. The name
-    // truck follows the footer down the same straight, so the page ends on a street lined with
-    // buildings rather than in a junction
-    const at = slots
-      .slice(1)
-      .filter((slot) => slot.kind === "card")
-      .map((slot) => slot.top - slot.gap / 2 - w.vh / 2);
+    // Ground visible from the screen's middle to its bottom edge
+    const H = hoverHeight(w.vw, w.vh);
+    const viewHalf = ((w.vh * k) / 2) * (H / (H - CARD_PLANE));
+    const glide = glideEnd(w);
+    const window = TURN_WINDOW * w.vh;
+    // When each section's turn is taken (its middle), one per section
+    const at = slots.map((slot, i) => {
+      if (i === 0) return glide + window;
+      const gap = slot.top - slot.gap / 2 - w.vh / 2;
+      if (i < slots.length - 1) return gap;
+      // The last one (the name truck) turns before it arrives, so by the bottom of the page the
+      // junction has gone off screen and it's parked between buildings
+      const run = (viewHalf + JUNCTION_REACH - TURN_R + 3) / (1.6 * k);
+      return Math.min(gap, maxScroll - window - run);
+    });
     at.forEach((scroll, i) => {
       const prev = knots[knots.length - 1];
       const room = scroll - prev.scroll;
       if (room < 20) return;
-      // Each turn takes its own stretch of scroll round the gap, and is over before the page ends
-      const before = Math.min(TURN_WINDOW * w.vh, room * 0.45);
+      // Each turn takes its own stretch of scroll round its moment, and is over before the page ends
+      const before = i === 0 ? scroll - glide : Math.min(window, room * 0.45);
       const next = i + 1 < at.length ? at[i + 1] : Infinity;
-      const after = Math.max(30, Math.min(TURN_WINDOW * w.vh, (next - scroll) * 0.45, maxScroll - 0.04 * w.vh - scroll));
-      const minStraight = corners.length ? MIN_LEG - 2 * TURN_R : MIN_LEG - TURN_R;
+      const after = Math.max(30, Math.min(window, (next - scroll) * 0.45, maxScroll - 0.04 * w.vh - scroll));
+      const minStraight = corners.length ? MIN_LEG - 2 * TURN_R : FIRST_STRAIGHT;
       const straight = Math.max(minStraight, CAMERA_DRIFT * k * (scroll - before - prev.scroll));
       // Whole units, so a re-measure that moves nothing visible leaves the city alone
       const d = Math.round(prev.d + straight + TURN_R);
       corners.push(d);
       knots.push({ scroll: scroll - before, d: d - TURN_R, m: 0 }, { scroll: scroll + after, d: d + TURN_R, m: 0 });
     });
+    // Down the last straight far enough that the final junction is off screen at the bottom
+    const last = knots[knots.length - 1];
+    if (corners.length && maxScroll > last.scroll + 1) {
+      const corner = corners[corners.length - 1];
+      knots.push({ scroll: maxScroll, d: Math.max(last.d + CAMERA_DRIFT * k * (maxScroll - last.scroll), corner + viewHalf + JUNCTION_REACH + 3), m: 0 });
+    }
   }
   smoothSlopes(knots, CAMERA_DRIFT * k);
   const last = knots[knots.length - 1];
