@@ -30,6 +30,8 @@ export interface RidePlan {
 }
 
 export interface Slot {
+  /** A section card, or the truck carrying the name in 3D letters (no card on it) */
+  kind: "card" | "name";
   /** The card, in page coordinates (CSS px, untransformed) */
   top: number;
   left: number;
@@ -43,6 +45,11 @@ export interface Slot {
 }
 
 export const ARRIVAL_MS = 1150;
+
+/** The name the last truck carries, and how its letters are loaded on after it parks */
+export const NAME_LOAD = "NIKHIL RANGA";
+export const LETTER_GAP_MS = 170;
+export const LETTER_DROP_MS = 460;
 
 function shuffle<T>(list: readonly T[]) {
   const out = [...list];
@@ -133,9 +140,9 @@ const getObserver = () => {
   return observer;
 };
 
-export function registerSlot(index: number, card: HTMLElement, wrap: HTMLElement, arrived: boolean) {
+export function registerSlot(index: number, card: HTMLElement, wrap: HTMLElement, arrived: boolean, kind: Slot["kind"] = "card") {
   elements.set(index, { card, wrap });
-  convoy.slots.set(index, { top: 0, left: 0, width: 0, height: 0, gap: 0, start: arrived ? 0 : -1, plan: convoy.plans[index % PLAN_COUNT] });
+  convoy.slots.set(index, { kind, top: 0, left: 0, width: 0, height: 0, gap: 0, start: arrived ? 0 : -1, plan: convoy.plans[index % PLAN_COUNT] });
   getObserver().observe(card);
   measure();
   return () => {

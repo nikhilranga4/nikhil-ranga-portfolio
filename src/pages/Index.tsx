@@ -8,6 +8,7 @@ import Education from "@/components/Education";
 import Experience from "@/components/Experience";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import Footer from "@/components/Footer";
+import NameRide from "@/components/NameRide";
 import RideIn from "@/components/RideIn";
 import GitHubContributions from "@/components/GitHubContributions";
 import Navbar from "@/components/Navbar";
@@ -282,6 +283,7 @@ const Index = () => {
                 <RideIn index={6}>
                   <Footer />
                 </RideIn>
+                <NameRide index={7} />
               </div>
             </div>
           </SmoothScroll>

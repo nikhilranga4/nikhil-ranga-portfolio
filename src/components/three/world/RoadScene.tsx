@@ -1,9 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, useTexture } from "@react-three/drei";
+import { useFont, useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
+import { TextGeometry } from "three-stdlib";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { ARRIVAL_MS, CAB_MODELS, CAR_MODELS, arrivalPose, convoy } from "@/lib/convoy";
+import { ARRIVAL_MS, CAB_MODELS, CAR_MODELS, LETTER_DROP_MS, LETTER_GAP_MS, NAME_LOAD, arrivalPose, convoy } from "@/lib/convoy";
+import type { PaletteColors } from "@/lib/palettes";
 import {
   CAMERA_DRIFT,
   CARD_PLANE,
@@ -27,6 +29,13 @@ const CITY_URL = "/models/city/city.glb";
 const CARS_URL = "/models/cars/cars.glb";
 /** Poly Haven skies (CC0), graded to JPG */
 const SKY_URLS = ["/sky/sky-night.jpg", "/sky/sky-day.jpg"];
+/** Helvetiker Bold (MgOpen Moderna), just the name's letters, for the 3D name on the last truck */
+const FONT_URL = "/fonts/name-3d.typeface.json";
+/** The name's letters: one word per line on the bed ("NIKHIL" above "RANGA"), loaded in reading order */
+const NAME_LETTERS = NAME_LOAD.split(" ").flatMap((word, row) => word.split("").map((ch, col) => ({ ch, row, col })));
+const NAME_LINES = NAME_LOAD.split(" ").length;
+/** Letters lie flat on the bed, face up (0 = flat), so they read straight from the camera above */
+const LETTER_LEAN = 0;
 
 /** Footprints (Kenney units) of the buildings we place: [width, depth, height] */
 const KIT = {
@@ -166,6 +175,8 @@ function vehicleShape(root: THREE.Object3D): VehicleShape | null {
 
 interface RoadSceneProps {
   world: MutableRefObject<WorldState>;
+  /** Theme colours, for the 3D name's gradient */
+  colors: PaletteColors;
   /** Lighter traffic for phones / integrated GPUs */
   lite: boolean;
 }
@@ -177,10 +188,11 @@ interface RoadSceneProps {
  * draws everything around them, mapped so each truck stays exactly under its card. Night and day
  * swap textures and light levels on the same materials (no shader recompiles).
  */
-export function RoadScene({ world, lite }: RoadSceneProps) {
+export function RoadScene({ world, lite, colors }: RoadSceneProps) {
   const { gl, scene, camera } = useThree();
   const city = useGLTF(CITY_URL);
   const cars = useGLTF(CARS_URL);
+  const font = useFont(FONT_URL);
   const [skyNight, skyDay] = useTexture(SKY_URLS);
 
   // ── Models ──
@@ -213,6 +225,53 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
     return { shapes: out, carMap: map };
   }, [cars]);
   useEffect(() => () => Object.values(shapes).forEach((s) => s.geometry.dispose()), [shapes]);
+
+  // ── The name in 3D: one extruded, bevelled geometry per distinct letter ──
+  const letterGeos = useMemo(() => {
+    const out = new Map<string, THREE.BufferGeometry>();
+    for (const { ch } of NAME_LETTERS) {
+      if (out.has(ch)) continue;
+      const g = new TextGeometry(ch, { font, size: 1, height: 0.34, curveSegments: 5, bevelEnabled: true, bevelThickness: 0.045, bevelSize: 0.035 }) as unknown as THREE.BufferGeometry;
+      g.center();
+      g.computeBoundingBox();
+      out.set(ch, g);
+    }
+    return out;
+  }, [font]);
+  useEffect(() => () => letterGeos.forEach((g) => g.dispose()), [letterGeos]);
+  // Where each letter sits across its line (in font units, centred), spaced by the font's own
+  // advance widths so the words read like set type; and the widest line, to fit the bed
+  const nameLayout = useMemo(() => {
+    const data = (font as unknown as { data: { resolution: number; glyphs: Record<string, { ha: number }> } }).data;
+    const advance = (ch: string) => (data.glyphs[ch]?.ha ?? data.resolution * 0.7) / data.resolution;
+    // Extra space between letters (font units), so each one stands apart on the bed
+    const TRACKING = 0.15;
+    const words = NAME_LOAD.split(" ");
+    const span = (word: string) => word.split("").reduce((a, ch) => a + advance(ch), 0) + TRACKING * (word.length - 1);
+    const offsets = words.map((word) => {
+      let x = -span(word) / 2;
+      return word.split("").map((ch) => {
+        const wd = advance(ch);
+        const center = x + wd / 2;
+        x += wd + TRACKING;
+        return center;
+      });
+    });
+    const widest = Math.max(...words.map(span));
+    return { offsets, widest };
+  }, [font]);
+  // Gradient across the name, like the old wordmark: brand 1 → 3 → 2
+  const letterMats = useMemo(() => {
+    const a = new THREE.Color(colors.c1);
+    const b = new THREE.Color(colors.c3);
+    const c = new THREE.Color(colors.c2);
+    return NAME_LETTERS.map((_, i) => {
+      const t = i / (NAME_LETTERS.length - 1);
+      const color = t < 0.5 ? a.clone().lerp(b, t * 2) : b.clone().lerp(c, t * 2 - 1);
+      return new THREE.MeshStandardMaterial({ color, metalness: 0.25, roughness: 0.3, emissive: color.clone(), emissiveIntensity: 0 });
+    });
+  }, [colors]);
+  useEffect(() => () => letterMats.forEach((m) => m.dispose()), [letterMats]);
 
   // ── Textures, environment ──
   const tex = useMemo(
@@ -266,6 +325,7 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
       sign: new THREE.MeshLambertMaterial({ map: tex.sign }),
       beacon: new THREE.MeshBasicMaterial({ color: "#ffb21a", toneMapped: false }),
       tail: new THREE.MeshBasicMaterial({ color: "#ff3b30", toneMapped: false }),
+      tyre: new THREE.MeshLambertMaterial({ color: "#141719" }),
       blob: new THREE.MeshBasicMaterial({ color: "#000000", alphaMap: tex.soft, transparent: true, opacity: 0.5, depthWrite: false }),
       cardShadow: new THREE.MeshBasicMaterial({ color: "#000000", alphaMap: tex.soft, transparent: true, opacity: 0.45, depthWrite: false }),
       pool: new THREE.MeshBasicMaterial({ map: tex.glow, color: "#ffcf8a", transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }),
@@ -367,6 +427,8 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
   const beaconMesh = useRef<THREE.InstancedMesh>(null);
   const tailMesh = useRef<THREE.InstancedMesh>(null);
   const glowPoints = useRef<THREE.Points>(null);
+  const wheelMesh = useRef<THREE.InstancedMesh>(null);
+  const letterRefs = useRef<(THREE.Mesh | null)[]>([]);
 
   const tmp = useMemo(
     () => ({
@@ -375,6 +437,10 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
       white: new THREE.Color(1, 1, 1),
       tint: new THREE.Color(),
       pivot: { x: 0, z: 0 },
+      basis: new THREE.Matrix4(),
+      ax: new THREE.Vector3(),
+      ay: new THREE.Vector3(),
+      az: new THREE.Vector3(),
       counts: new Map<string, number>(),
       mode: "",
     }),
@@ -496,6 +562,7 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
     const night = isDay ? 0 : inFall;
     mats.city.emissive.setRGB(0.2 * night, 0.17 * night, 0.13 * night);
     mats.vehicle.emissive.setRGB(0.1 * night, 0.1 * night, 0.12 * night);
+    for (const m of letterMats) m.emissiveIntensity = 0.28 * night;
     mats.pool.opacity = 0.32 * night;
     mats.glows.opacity = night;
     mats.blob.opacity = isDay ? 0.42 : 0.6;
@@ -570,6 +637,9 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
     let trailers = 0;
     let beacons = 0;
     let tails = 0;
+    let wheels = 0;
+    let nameShown = false;
+    const wheelM = wheelMesh.current;
     const shadowM = shadowMesh.current;
     const trailerM = trailerMesh.current;
     const signM = signMesh.current;
@@ -584,8 +654,8 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
       mesh.setMatrixAt(i, dummy.matrix);
     };
     for (const [index, slot] of convoy.slots) {
-      if (!slot.width) continue;
-      // Skip trucks well off screen
+      // Trucks only show up once they start driving in (and not when well off screen)
+      if (!slot.width || slot.start < 0) continue;
       const screenTop = slot.top - w.scroll;
       if (screenTop > w.vh * 2 || screenTop + slot.height < -w.vh) continue;
       const plan = slot.plan;
@@ -607,8 +677,13 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
       if (shape) {
         const S = THREE.MathUtils.clamp((slot.gap * k * 0.5) / (0.62 * shape.length), 1.1, 2.7);
         const L = shape.length * S;
-        const cabX = pivot.x + fx * 0.12 * L;
-        const cabZ = pivot.z + fz * 0.12 * L;
+        // Under a card the back of the cab tucks beneath it; the name truck's bed is open, so its
+        // cab drives fully ahead of it, hitched on with a short gap
+        const NAME_HITCH = 0.7;
+        const ahead = slot.kind === "name" ? L / 2 + NAME_HITCH : 0.12 * L;
+        const cabX = pivot.x + fx * ahead;
+        const cabZ = pivot.z + fz * ahead;
+        if (slot.kind === "name") putBox(trailerM, trailers++, pivot.x + fx * NAME_HITCH * 0.5, STREET_Y + 1.1, pivot.z + fz * NAME_HITCH * 0.5, pose.yaw, NAME_HITCH + 0.4, 0.3, 0.55);
         putVehicle(plan.cab, cabX, cabZ, Math.PI / 2 - pose.yaw, S, tmp.tint.set(plan.tint));
         // Escort car riding alongside
         const escort = plan.escort ? shapes[plan.escort] : null;
@@ -650,11 +725,62 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
         if (night > 0) addGlow(bx, STREET_Y + CARD_PLANE + 0.1, bz, 1.5, 0.85, 0.15);
       }
 
-      // The card's shadow on the road, falling down-right of it
       const cx = pivot.x - fx * (cardLen / 2);
       const cz = pivot.z - fz * (cardLen / 2);
-      putBox(shadowM, shadows++, camX + (cx - camX) * lift - 0.9, STREET_Y + 0.025, camZ + (cz - camZ) * lift + 0.9, pose.yaw, cardLen * lift * 1.06, 1, cardW * lift * 1.06);
+      if (slot.kind === "card") {
+        // The card's shadow on the road, falling down-right of it
+        putBox(shadowM, shadows++, camX + (cx - camX) * lift - 0.9, STREET_Y + 0.025, camZ + (cz - camZ) * lift + 0.9, pose.yaw, cardLen * lift * 1.06, 1, cardW * lift * 1.06);
+        continue;
+      }
+
+      // ── The name truck: an open flatbed, and the letters loaded onto it one after another ──
+      const bedTop = STREET_Y + 1.55;
+      putBox(trailerM, trailers++, cx, bedTop - 0.2, cz, pose.yaw, cardLen + 0.5, 0.4, cardW * 1.06);
+      for (const side of [-1, 1]) {
+        putBox(trailerM, trailers++, cx + rx * side * cardW * 0.53, bedTop + 0.12, cz + rz * side * cardW * 0.53, pose.yaw, cardLen + 0.5, 0.25, 0.14);
+        // Axles: two under the front of the bed, three at the back
+        for (const along of [0.9, 2.2, cardLen - 3.4, cardLen - 2.2, cardLen - 1.0]) {
+          const wx = pivot.x - fx * along + rx * side * cardW * 0.5;
+          const wz = pivot.z - fz * along + rz * side * cardW * 0.5;
+          putBox(wheelM, wheels++, wx, STREET_Y + 0.5, wz, pose.yaw, 1.0, 1.0, 0.5);
+        }
+      }
+      nameShown = true;
+      // Letters sized so the longer word fills most of the bed's width; one line per word, with a
+      // clear margin at the front and back of the bed
+      const pad = cardLen * 0.1;
+      const line = (cardLen - pad * 2) / NAME_LINES;
+      const size = Math.min((cardW * 0.8) / nameLayout.widest, line * 1.0);
+      const parked = slot.start === 0 ? Infinity : w.now - slot.start - ARRIVAL_MS;
+      const { basis, ax, ay, az } = tmp;
+      NAME_LETTERS.forEach(({ ch }, i) => {
+        const mesh = letterRefs.current[i];
+        const geo = letterGeos.get(ch);
+        if (!mesh || !geo) return;
+        // Dropped in one after another once the truck has stopped, with a little bounce
+        const u = parked === Infinity ? 1 : clamp01((parked - i * LETTER_GAP_MS) / LETTER_DROP_MS);
+        mesh.visible = u > 0;
+        if (!mesh.visible) return;
+        const fallH = 9 * (1 - bounce(u));
+        const { row, col } = NAME_LETTERS[i];
+        const along = pad + (row + 0.5) * line;
+        const across = nameLayout.offsets[row][col] * size;
+        const lx = pivot.x - fx * along + rx * across;
+        const lz = pivot.z - fz * along + rz * across;
+        // Letter axes: right → across the truck, up → forward (up the screen), face → up
+        ax.set(rx, 0, rz);
+        ay.set(fx * Math.cos(LETTER_LEAN), Math.sin(LETTER_LEAN), fz * Math.cos(LETTER_LEAN));
+        az.crossVectors(ax, ay);
+        basis.makeBasis(ax, ay, az);
+        mesh.quaternion.setFromRotationMatrix(basis);
+        const box = geo.boundingBox!;
+        const h = (box.max.y - box.min.y) * size;
+        const d = (box.max.z - box.min.z) * size;
+        mesh.position.set(lx, bedTop + (h / 2) * Math.sin(LETTER_LEAN) + (d / 2) * Math.cos(LETTER_LEAN) + fallH, lz);
+        mesh.scale.setScalar(size * (0.85 + 0.15 * u));
+      });
     }
+    if (!nameShown) letterRefs.current.forEach((m) => m && (m.visible = false));
 
     // Hide unused instances (count stays fixed so the draw is the same shader every frame)
     const park = (mesh: THREE.InstancedMesh | null, from: number) => {
@@ -676,6 +802,7 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
     park(signM, trailers);
     park(beaconM, beacons);
     park(tailM, tails);
+    park(wheelM, wheels);
     glowGeo.setDrawRange(0, night > 0 ? glow : 0);
     pos.needsUpdate = col.needsUpdate = true;
   });
@@ -728,7 +855,19 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
           />
         ) : null
       )}
-      <instancedMesh ref={trailerMesh} args={[geo.box, mats.trailer, SLOTS]} frustumCulled={false} />
+      <instancedMesh ref={trailerMesh} args={[geo.box, mats.trailer, SLOTS + 6]} frustumCulled={false} />
+      <instancedMesh ref={wheelMesh} args={[geo.box, mats.tyre, 12]} frustumCulled={false} />
+      {NAME_LETTERS.map(({ ch }, i) => (
+        <mesh
+          key={i}
+          ref={(m) => {
+            letterRefs.current[i] = m;
+          }}
+          geometry={letterGeos.get(ch)}
+          material={letterMats[i]}
+          visible={false}
+        />
+      ))}
       <instancedMesh ref={signMesh} args={[geo.flat, mats.sign, SLOTS]} frustumCulled={false} />
       <instancedMesh ref={tailMesh} args={[geo.box, mats.tail, SLOTS * 2]} frustumCulled={false} />
       <instancedMesh ref={beaconMesh} args={[geo.box, mats.beacon, SLOTS * 4]} frustumCulled={false} />
@@ -737,5 +876,16 @@ export function RoadScene({ world, lite }: RoadSceneProps) {
   );
 }
 
+/** Lands, rebounds a little, settles */
+function bounce(t: number) {
+  const n = 7.5625;
+  const d = 2.75;
+  if (t < 1 / d) return n * t * t;
+  if (t < 2 / d) return n * (t -= 1.5 / d) * t + 0.75;
+  if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + 0.9375;
+  return n * (t -= 2.625 / d) * t + 0.984375;
+}
+
 useGLTF.preload(CITY_URL);
+useFont.preload(FONT_URL);
 useGLTF.preload(CARS_URL);

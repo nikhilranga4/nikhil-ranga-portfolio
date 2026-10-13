@@ -70,86 +70,6 @@ function useIstTime() {
   return { time, part };
 }
 
-/**
- * One line of the wordmark drawn as SVG text. The viewBox is set to the text's own bounding box,
- * so it scales to exactly the available width in any font, and the gradient fill is a real SVG
- * gradient (reliable on every browser, unlike background-clip text on some mobile Safari builds).
- */
-const WordmarkLine = ({ text, id }: { text: string; id: string }) => {
-  const textRef = useRef<SVGTextElement>(null);
-  const [box, setBox] = useState("0 0 1000 160");
-
-  useEffect(() => {
-    const fit = () => {
-      const el = textRef.current;
-      if (!el) return;
-      try {
-        const b = el.getBBox();
-        if (b.width) setBox(`${b.x} ${b.y} ${b.width} ${b.height}`);
-      } catch {
-        // getBBox can throw while the SVG isn't rendered yet; the default viewBox still shows the text
-      }
-    };
-    fit();
-    document.fonts?.ready.then(fit).catch(() => undefined);
-    document.fonts?.addEventListener("loadingdone", fit);
-    const mo = new MutationObserver(() => requestAnimationFrame(fit));
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-palette"] });
-    return () => {
-      document.fonts?.removeEventListener("loadingdone", fit);
-      mo.disconnect();
-    };
-  }, [text]);
-
-  return (
-    <svg viewBox={box} className="block h-auto w-full overflow-visible" role="presentation">
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" style={{ stopColor: "hsl(var(--brand-1))" }} />
-          <stop offset="50%" style={{ stopColor: "hsl(var(--brand-3))" }} />
-          <stop offset="100%" style={{ stopColor: "hsl(var(--brand-2))" }} />
-        </linearGradient>
-      </defs>
-      <text
-        ref={textRef}
-        x="0"
-        y="120"
-        fill={`url(#${id})`}
-        stroke="hsl(var(--foreground) / 0.12)"
-        strokeWidth="1"
-        className="font-display font-extrabold uppercase"
-        style={{ fontSize: 140, fontVariationSettings: "var(--display-variation, normal)" }}
-      >
-        {text}
-      </text>
-    </svg>
-  );
-};
-
-/** Giant footer wordmark: one line on wider screens, two stacked lines on phones. */
-const Wordmark = ({ text }: { text: string }) => {
-  const [first, ...rest] = text.split(" ");
-  return (
-    <motion.div
-      aria-label={text}
-      role="img"
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ type: "spring", stiffness: 70, damping: 16 }}
-      className="select-none"
-    >
-      <div className="hidden sm:block">
-        <WordmarkLine text={text} id="wordmark-full" />
-      </div>
-      <div className="flex flex-col gap-2 sm:hidden">
-        <WordmarkLine text={first} id="wordmark-first" />
-        <WordmarkLine text={rest.join(" ")} id="wordmark-rest" />
-      </div>
-    </motion.div>
-  );
-};
-
 const Footer = () => {
   const [visitorCount, setVisitorCount] = useState<number | null>(null);
   const [copied, setCopied] = useState<"email" | "message" | null>(null);
@@ -456,10 +376,7 @@ const Footer = () => {
             </a>
           </div>
 
-          <div className="mt-12">
-            <Wordmark text="Nikhil Ranga" />
-          </div>
-
+          {/* The giant name rides on the last truck in the convoy, in 3D (see NameRide) */}
           <div className="flex flex-col items-center justify-between gap-2 border-t border-border/60 py-6 text-xs text-muted-foreground sm:flex-row">
             <p>© {new Date().getFullYear()} Nikhil Ranga. All rights reserved.</p>
             <p className="font-mono">Built with React · Three.js · Framer Motion</p>

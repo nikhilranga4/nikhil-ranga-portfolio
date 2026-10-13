@@ -41,13 +41,13 @@ export const SCROLL = {
   fly: [0.08, 0.46] as const,
   /** Room copy and floating keys settle in */
   room: 0.48,
-  /** The copy leaves and the camera tilts down to the glass floor */
+  /** The copy leaves and the camera steps up to the window behind the desk */
   tilt: [0.7, 0.78] as const,
-  /** Cracks race across the glass */
+  /** Cracks race across the window */
   crack: [0.72, 0.8] as const,
-  /** The floor shatters */
+  /** The window blows out (from here the fall plays by itself, see useAutoDrop) */
   shatter: [0.8, 0.92] as const,
-  /** The camera drops through the hole toward the road (finishes just past the hero) */
+  /** The camera goes out through the window and down to the road (finishes past the hero) */
   drop: [0.86, 1] as const,
 };
 
@@ -95,6 +95,9 @@ export interface WorldState {
   scroll: number;
   /** Scroll position where the hero's pinned track ends */
   heroEnd: number;
+  /** Where the pinned track starts, and its scroll length */
+  heroTop: number;
+  heroLen: number;
   /** Viewports of hero scroll the drop beat takes */
   heroDropVh: number;
   /** Viewport size (CSS px) */

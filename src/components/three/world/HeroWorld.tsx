@@ -10,11 +10,11 @@ import { playSfx, setIntroActive } from "@/lib/music";
 import { chime, enterThunk, keyClick, landThud, whoosh } from "@/lib/music/sfx";
 import { Corridor, DOOR } from "./Corridor";
 import { FloatingKeys } from "./FloatingKeys";
-import { GlassFloor, IMPACT } from "./GlassFloor";
+import { GlassWindow, WINDOW_CENTER } from "./GlassWindow";
 import { IntroKeyboard, KEYBOARD_POS } from "./IntroKeyboard";
 import { Precompile } from "./Precompile";
 import { RoadScene } from "./RoadScene";
-import { Room } from "./Room";
+import { ROOM, Room } from "./Room";
 import {
   INTRO,
   KEY_TIMES,
@@ -25,6 +25,7 @@ import {
   STREET_Y,
   dropProgress,
   easeInOut,
+  landedAt,
   fallBlend,
   hoverHeight,
   roadCameraX,
@@ -180,7 +181,9 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
       doorLook: new THREE.Vector3(0, 1.32, 0),
       roomPos: new THREE.Vector3(),
       roomLook: new THREE.Vector3(),
-      tiltPos: new THREE.Vector3(0.15, 2.9, -2.5),
+      // Stepping up to the window behind the desk
+      tiltPos: new THREE.Vector3(0.1, 1.68, -4.7),
+      exit: new THREE.Vector3(),
       hoverPos: new THREE.Vector3(),
       p0: new THREE.Vector3(),
       p1: new THREE.Vector3(),
@@ -222,18 +225,18 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
     tmp.curve.getPoint(fly, tmp.pos);
     tmp.look.copy(tmp.doorLook).lerp(tmp.roomLook, smooth(fly * 1.15));
 
-    // After the room: tilt down at the glass, shake as it shatters, drop through, then fall
+    // After the room: up to the window, shake as it shatters, out through it, then down
     const tilt = easeInOut(span(w.progress, SCROLL.tilt));
     if (tilt > 0) {
       tmp.pos.lerp(tmp.tiltPos, tilt);
-      tmp.look.lerp(IMPACT, tilt);
+      tmp.look.lerp(WINDOW_CENTER, tilt);
     }
     const shake = Math.sin(Math.min(1, span(w.progress, [SCROLL.shatter[0], SCROLL.shatter[0] + 0.07])) * Math.PI) * 0.06;
     if (shake > 0) {
       tmp.pos.x += Math.sin(w.progress * 900) * shake;
       tmp.pos.y += Math.cos(w.progress * 1300) * shake;
     }
-    // Then the drop: through the hole, straight down, braking into a hover above the road
+    // Then the drop: out through the window, straight down, braking into a hover above the road
     const dropP = w.reduceMotion ? (w.fall > 0.3 ? 1 : 0) : dropProgress(w);
     const hover = hoverHeight(size.width, size.height);
     tmp.hoverPos.set(roadCameraX(w), STREET_Y + hover, ROAD.z);
@@ -241,22 +244,31 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
     if (dropP > 0) {
       tmp.m.lookAt(tmp.pos, tmp.look, camera.up);
       tmp.qLook.setFromRotationMatrix(tmp.m);
-      // Accelerating fall, then a firm brake (the two halves meet at the same speed)
-      const S = 0.72;
-      const g = dropP < S ? S * (dropP / S) ** 2 : S + (1 - S) * (1 - (1 - (dropP - S) / (1 - S)) ** 2);
       tmp.p0.copy(tmp.pos);
-      tmp.p1.set(IMPACT.x, -12, IMPACT.z);
-      tmp.p2.set(ROAD_X0, STREET_Y + hover + 24, ROAD.z);
-      const a = (1 - g) ** 3;
-      const b = 3 * (1 - g) ** 2 * g;
-      const c = 3 * (1 - g) * g * g;
-      const d = g ** 3;
-      tmp.pos.set(
-        a * tmp.p0.x + b * tmp.p1.x + c * tmp.p2.x + d * tmp.hoverPos.x,
-        a * tmp.p0.y + b * tmp.p1.y + c * tmp.p2.y + d * tmp.hoverPos.y,
-        a * tmp.p0.z + b * tmp.p1.z + c * tmp.p2.z + d * tmp.hoverPos.z
-      );
-      turn = smooth(Math.min(1, dropP * 1.7));
+      // A step out past the frame...
+      tmp.exit.set(WINDOW_CENTER.x, WINDOW_CENTER.y - 0.1, ROOM.back - 2.6);
+      const OUT = 0.16;
+      if (dropP < OUT) {
+        tmp.pos.lerpVectors(tmp.p0, tmp.exit, smooth(dropP / OUT));
+      } else {
+        // ...then the fall: accelerating, then a firm brake (the halves meet at the same speed)
+        const u = (dropP - OUT) / (1 - OUT);
+        const S = 0.7;
+        const g = u < S ? S * (u / S) ** 2 : S + (1 - S) * (1 - (1 - (u - S) / (1 - S)) ** 2);
+        tmp.p1.set(tmp.exit.x, tmp.exit.y - 8, tmp.exit.z - 2);
+        tmp.p2.set(ROAD_X0, STREET_Y + hover + 22, ROAD.z);
+        const a = (1 - g) ** 3;
+        const b = 3 * (1 - g) ** 2 * g;
+        const c = 3 * (1 - g) * g * g;
+        const d = g ** 3;
+        tmp.pos.set(
+          a * tmp.exit.x + b * tmp.p1.x + c * tmp.p2.x + d * tmp.hoverPos.x,
+          a * tmp.exit.y + b * tmp.p1.y + c * tmp.p2.y + d * tmp.hoverPos.y,
+          a * tmp.exit.z + b * tmp.p1.z + c * tmp.p2.z + d * tmp.hoverPos.z
+        );
+      }
+      // Tip forward to look straight down as we leave the building
+      turn = smooth((dropP - 0.08) / 0.5);
     }
     // Touchdown: a thud and a jolt, once per forward crossing
     if (dropP >= 0.985 && !tmp.landed) {
@@ -373,6 +385,8 @@ function useRoadInputs(world: MutableRefObject<WorldState>) {
         let top = 0;
         for (let e: HTMLElement | null = track; e; e = e.offsetParent as HTMLElement | null) top += e.offsetTop;
         const length = track.offsetHeight - w.vh;
+        w.heroTop = top;
+        w.heroLen = length;
         w.heroEnd = top + length;
         w.heroDropVh = ((SCROLL.drop[1] - SCROLL.drop[0]) * length) / w.vh;
       }
@@ -388,6 +402,76 @@ function useRoadInputs(world: MutableRefObject<WorldState>) {
     return () => {
       resize.disconnect();
       window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [world]);
+}
+
+// ── The fall plays itself ──────────────────────────────────────────────────
+
+const easeInOutSine = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
+
+/**
+ * Once the window shatters, the page glides on by itself: out of the window, down to the road, and
+ * on until the first section's truck has driven in under the camera, so the fall and the first
+ * arrival are one smooth, unbroken move (the visitor's scroll input is held for it).
+ * Scrolling back up from the road does the reverse, back into the room. Only for scrolls the
+ * visitor makes (wheel, touch, keys): navigation jumps pass straight through.
+ */
+function useAutoDrop(world: MutableRefObject<WorldState>) {
+  useEffect(() => {
+    let lastInput = -Infinity;
+    let running = false;
+    let lastY = readScroll();
+    const mark = () => {
+      lastInput = performance.now();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", " ", "End", "Home"].includes(e.key)) mark();
+    };
+    const onScroll = () => {
+      const w = world.current;
+      const lenis = lenisRef.current;
+      const y = readScroll();
+      const dir = Math.sign(y - lastY);
+      lastY = y;
+      if (!lenis || running || w.reduceMotion || !dir || performance.now() - lastInput > 450) return;
+      const at = (p: number) => w.heroTop + p * w.heroLen;
+      const breakY = at(SCROLL.shatter[0]);
+      const roomY = at(SCROLL.crack[0] - 0.02);
+      // The end of the glide: the first card a third of the way down the screen, its cab above it
+      const first = convoy.slots.get(0);
+      const landY = Math.max(landedAt(w), first?.width ? first.top - w.vh * 0.32 : 0);
+      let target: number | null = null;
+      let duration = 0;
+      if (dir > 0 && y >= breakY - 1 && y < landY - 4) {
+        target = landY;
+        duration = 1 + 3.4 * Math.min(1, (landY - y) / (landY - breakY));
+      } else if (dir < 0 && y > breakY && y < landY - 4) {
+        target = roomY;
+        duration = 0.8 + 1.4 * Math.min(1, (y - roomY) / (landY - roomY));
+      }
+      if (target === null) return;
+      running = true;
+      lenis.scrollTo(target, {
+        duration,
+        easing: easeInOutSine,
+        lock: true,
+        force: true,
+        onComplete: () => {
+          running = false;
+          lastY = readScroll();
+        },
+      });
+    };
+    window.addEventListener("wheel", mark, { passive: true });
+    window.addEventListener("touchmove", mark, { passive: true });
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("wheel", mark);
+      window.removeEventListener("touchmove", mark);
+      window.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", onScroll);
     };
   }, [world]);
@@ -426,6 +510,8 @@ const HeroWorld = ({ progress, revealed, portrait, mode, reduceMotion, colors, o
     fall: 0,
     scroll: 0,
     heroEnd: Infinity,
+    heroTop: 0,
+    heroLen: 1,
     heroDropVh: 0.6,
     vw: window.innerWidth,
     vh: window.innerHeight,
@@ -437,6 +523,7 @@ const HeroWorld = ({ progress, revealed, portrait, mode, reduceMotion, colors, o
   world.current.reduceMotion = reduceMotion;
   world.current.mode = mode;
   useRoadInputs(world);
+  useAutoDrop(world);
 
   useEffect(
     () =>
@@ -498,8 +585,8 @@ const HeroWorld = ({ progress, revealed, portrait, mode, reduceMotion, colors, o
         <Floor />
         <Corridor world={world} neonA={neonA} neonB={neonB} />
         <Room neonA={neonA} neonB={neonB} />
-        <GlassFloor world={world} neonA={neonA} count={lite ? 70 : 140} />
-        <RoadScene world={world} lite={lite} />
+        <GlassWindow world={world} neonA={neonA} count={lite ? 60 : 110} />
+        <RoadScene world={world} lite={lite} colors={colors} />
         <IntroKeyboard world={world} ramp={[colors.c1, colors.c2, colors.c3]} />
         <FloatingKeys world={world} colors={colors} />
         <Precompile onCompiled={() => setCompiled(true)} onReady={onReady} />

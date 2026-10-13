@@ -2,10 +2,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { RBox as RoundedBox } from "./geometry";
 import * as THREE from "three";
 import { DOOR } from "./Corridor";
-import { cityTexture, codeTexture, radialTexture } from "./textures";
+import { codeTexture, radialTexture } from "./textures";
 
 /** Interior bounds: the room runs from the back of the corridor wall to the window wall. */
 export const ROOM = { halfW: 3.4, back: -8, height: 3.2 };
+/** The window in the back wall (the glass that breaks; see GlassWindow) */
+export const WINDOW = { x0: -2.4, x1: 2.4, y0: 0.8, y1: 2.9 };
 const FRONT = -DOOR.wall;
 const LENGTH = FRONT - ROOM.back;
 const MID_Z = (FRONT + ROOM.back) / 2;
@@ -124,7 +126,7 @@ interface RoomProps {
 
 export function Room({ neonA, neonB }: RoomProps) {
   const textures = useMemo(
-    () => ({ city: cityTexture(), codeA: codeTexture(5), codeB: codeTexture(17), glow: radialTexture("rgba(255,255,255,0.9)", "rgba(255,255,255,0)") }),
+    () => ({ codeA: codeTexture(5), codeB: codeTexture(17), glow: radialTexture("rgba(255,255,255,0.9)", "rgba(255,255,255,0)") }),
     []
   );
   useEffect(() => () => Object.values(textures).forEach((t) => t.dispose()), [textures]);
@@ -133,7 +135,6 @@ export function Room({ neonA, neonB }: RoomProps) {
     () => ({
       led: new THREE.MeshBasicMaterial({ color: new THREE.Color(neonA).lerp(new THREE.Color("#ffffff"), 0.3), toneMapped: false }),
       bulb: new THREE.MeshBasicMaterial({ color: new THREE.Color(neonB).lerp(new THREE.Color("#ffffff"), 0.6), toneMapped: false }),
-      city: new THREE.MeshBasicMaterial({ map: textures.city, toneMapped: false }),
       screenA: new THREE.MeshBasicMaterial({ map: textures.codeA, toneMapped: false }),
       screenB: new THREE.MeshBasicMaterial({ map: textures.codeB, toneMapped: false }),
       // Soft additive halos stand in for bloom around the screens and the bulb
@@ -162,13 +163,18 @@ export function Room({ neonA, neonB }: RoomProps) {
       <mesh material={mats.wall} position={[0, ROOM.height, MID_Z]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[ROOM.halfW * 2, LENGTH]} />
       </mesh>
-      {/* Back wall around the window */}
-      <mesh material={mats.wall} position={[0, ROOM.height / 2, ROOM.back]}>
-        <planeGeometry args={[ROOM.halfW * 2, ROOM.height]} />
+      {/* Back wall around the window (an opening: the glass and the view are GlassWindow's) */}
+      <mesh material={mats.wall} position={[0, WINDOW.y0 / 2, ROOM.back]}>
+        <planeGeometry args={[ROOM.halfW * 2, WINDOW.y0]} />
       </mesh>
-      <mesh material={mats.city} position={[0, 1.85, ROOM.back + 0.02]}>
-        <planeGeometry args={[4.8, 2.1]} />
+      <mesh material={mats.wall} position={[0, (WINDOW.y1 + ROOM.height) / 2, ROOM.back]}>
+        <planeGeometry args={[ROOM.halfW * 2, ROOM.height - WINDOW.y1]} />
       </mesh>
+      {[-1, 1].map((s) => (
+        <mesh key={s} material={mats.wall} position={[s * (WINDOW.x1 + ROOM.halfW) / 2, (WINDOW.y0 + WINDOW.y1) / 2, ROOM.back]}>
+          <planeGeometry args={[ROOM.halfW - WINDOW.x1, WINDOW.y1 - WINDOW.y0]} />
+        </mesh>
+      ))}
       {/* Window frame and mullions */}
       {[-2.4, -0.8, 0.8, 2.4].map((x) => (
         <mesh key={x} material={mats.dark} position={[x, 1.85, ROOM.back + 0.05]}>

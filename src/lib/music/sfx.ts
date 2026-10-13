@@ -289,3 +289,12 @@ export function horn(ctx: BaseAudioContext, out: AudioNode, t: number, pan = 0) 
     }
   }
 }
+
+/** A heavy 3D letter set down on the truck bed: a dull metal clunk, a little different each time. */
+export function letterDrop(ctx: BaseAudioContext, out: AudioNode, t: number, index = 0) {
+  const dest = panned(ctx, out, (jitter(index, 40) - 0.5) * 0.5);
+  const pitch = 0.85 + jitter(index, 41) * 0.3;
+  thock(ctx, dest, t, 180 * pitch, 70 * pitch, 0.28, 0.16);
+  burst(ctx, dest, t, { type: "bandpass", freq: 1200 * pitch, q: 2.5, level: 0.06, decay: 0.08, offset: jitter(index, 42) * 0.5 });
+  burst(ctx, dest, t + 0.004, { type: "lowpass", freq: 500, q: 0.7, level: 0.12, decay: 0.07, offset: jitter(index, 43) * 0.5 });
+}
