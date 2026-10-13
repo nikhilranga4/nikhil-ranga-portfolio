@@ -1,9 +1,10 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Environment, Lightformer } from "@react-three/drei";
 import type { PaletteColors } from "@/lib/palettes";
 import Cursor3D from "./Cursor3D";
 import RobotGuide from "./RobotGuide";
+import { Precompile } from "./world/Precompile";
 
 interface Stage3DProps {
   colors: PaletteColors;
@@ -17,10 +18,14 @@ interface Stage3DProps {
  * One canvas for both keeps it to a single extra WebGL context.
  */
 const Stage3D = ({ colors, cursor, robot, reduceMotion }: Stage3DProps) => {
+  // Draw nothing until the shaders (robot, cursor) have compiled in the background; drawing first
+  // makes the GPU driver compile them synchronously and freezes the page for a second or more
+  const [compiled, setCompiled] = useState(false);
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[70] transition-opacity duration-300 [html.menu-open_&]:opacity-0">
       <Canvas
-        dpr={[1, 1.5]}
+        frameloop={compiled ? "always" : "never"}
+        dpr={[1, 1.25]}
         camera={{ position: [0, 0, 10], fov: 35 }}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         style={{ pointerEvents: "none" }}
@@ -35,12 +40,12 @@ const Stage3D = ({ colors, cursor, robot, reduceMotion }: Stage3DProps) => {
           <Lightformer form="rect" intensity={3} color={colors.c3} position={[4, -3, -2]} scale={[3, 3, 1]} />
         </Environment>
 
-        {cursor && <Cursor3D colors={colors} />}
-        {robot && (
-          <Suspense fallback={null}>
-            <RobotGuide colors={colors} reduceMotion={reduceMotion} />
-          </Suspense>
-        )}
+        <Suspense fallback={null}>
+          {cursor && <Cursor3D colors={colors} />}
+          {robot && <RobotGuide colors={colors} reduceMotion={reduceMotion} />}
+          {/* Inside the Suspense, so it runs once the robot model has loaded */}
+          <Precompile onCompiled={() => setCompiled(true)} />
+        </Suspense>
       </Canvas>
     </div>
   );

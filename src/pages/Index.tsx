@@ -19,11 +19,11 @@ import SmoothScroll from "@/components/SmoothScroll";
 import BackToTop from "@/components/BackToTop";
 import { IntroContext } from "@/lib/intro";
 import { lenisRef } from "@/lib/lenis";
-import { playSfx, setIntroActive } from "@/lib/music";
-import { chime, whoosh } from "@/lib/music/sfx";
+import { setIntroActive, unlockAudio } from "@/lib/music";
+import { useIntroStage } from "@/lib/hero-state";
 
-/** The music fades in this long after the reveal starts, once the whoosh has done its thing */
-const MUSIC_AFTER_REVEAL_MS = 900;
+/** Never hold the page longer than this, whatever happens to the 3D intro */
+const INTRO_FAILSAFE_MS = 14000;
 
 const Stage3D = lazy(() => import("@/components/three/Stage3D"));
 
@@ -43,13 +43,31 @@ const GlobalStage = () => {
   const { colors, buddy } = useTheme();
   const reduceMotion = !!useReducedMotion();
   const [finePointer, setFinePointer] = useState(false);
+  // Started a moment after the hero's intro has played, while the browser is idle, so its
+  // one-off setup never competes with the boot, the intro or a moving frame
+  const introDone = useIntroStage() === "done";
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     setFinePointer(window.matchMedia("(pointer: fine)").matches);
   }, []);
 
+  useEffect(() => {
+    if (!introDone || started) return;
+    let idle = 0;
+    const timer = window.setTimeout(() => {
+      const start = () => setStarted(true);
+      if ("requestIdleCallback" in window) idle = window.requestIdleCallback(start, { timeout: 2000 });
+      else start();
+    }, 2500);
+    return () => {
+      window.clearTimeout(timer);
+      if (idle) window.cancelIdleCallback(idle);
+    };
+  }, [introDone, started]);
+
   const cursor = finePointer && !reduceMotion;
-  if (!cursor && !buddy) return null;
+  if (!started || (!cursor && !buddy)) return null;
 
   return (
     <SilentBoundary>
@@ -61,22 +79,21 @@ const GlobalStage = () => {
 };
 
 /**
- * Resolves once the page mounted underneath the loader has settled: the hero's 3D scene has
- * compiled its shaders and drawn, and a couple of frames have gone by since. Falls back after a
- * few seconds so a slow device (or no WebGL) never leaves the intro stuck.
+ * Resolves once the hero's 3D world has compiled its shaders and drawn, and a couple of frames
+ * have gone by since. Falls back after a few seconds so a slow device (or no WebGL) never leaves
+ * the boot screen stuck.
  */
-function useSettled(mounted: boolean, sceneReady: boolean) {
+function useSettled(sceneReady: boolean) {
   const [settled, setSettled] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
-    if (!mounted) return;
-    const timer = window.setTimeout(() => setTimedOut(true), 3500);
+    const timer = window.setTimeout(() => setTimedOut(true), 9000);
     return () => window.clearTimeout(timer);
-  }, [mounted]);
+  }, []);
 
   useEffect(() => {
-    if (!mounted || !sceneReady) return;
+    if (!sceneReady) return;
     let raf = 0;
     let timer = 0;
     raf = requestAnimationFrame(() => {
@@ -88,64 +105,82 @@ function useSettled(mounted: boolean, sceneReady: boolean) {
       cancelAnimationFrame(raf);
       window.clearTimeout(timer);
     };
-  }, [mounted, sceneReady]);
+  }, [sceneReady]);
 
   return settled || timedOut;
 }
 
-const Index = () => {
-  // The site mounts underneath the loader as the last key is typed, and the loader only wipes away
-  // once the intro has finished AND the site has settled, so the wipe never stutters.
-  const [siteMounted, setSiteMounted] = useState(false);
-  const [introDone, setIntroDone] = useState(false);
-  const [sceneReady, setSceneReady] = useState(false);
-  const settled = useSettled(siteMounted, sceneReady);
-  const loading = !(introDone && settled);
-  const handleReady = useCallback(() => setSiteMounted(true), []);
-  const handleSceneReady = useCallback(() => setSceneReady(true), []);
-  const intro = useMemo(() => ({ revealed: !loading, sceneReady: handleSceneReady }), [loading, handleSceneReady]);
-  const handleDone = useCallback(() => {
-    setSiteMounted(true);
-    setIntroDone(true);
+/**
+ * Holds scrolling while the boot screen or the 3D intro plays, and keeps offering sound during
+ * it. Lives in its own component so intro stage changes re-render only this, not the whole page.
+ * Rendered after <SmoothScroll> so Lenis exists by the time its effects run.
+ */
+const IntroLock = ({ loading }: { loading: boolean }) => {
+  const stage = useIntroStage();
+  const [failsafe, setFailsafe] = useState(false);
+  const introPlaying = !failsafe && stage !== "done";
+  const locked = loading || introPlaying;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setFailsafe(true), INTRO_FAILSAFE_MS);
+    return () => window.clearTimeout(timer);
   }, []);
 
-  // No scrolling the hidden page while the loader covers it
   useEffect(() => {
-    if (!loading) return;
+    if (!locked) return;
     const root = document.documentElement;
     const previous = root.style.overflow;
     root.style.overflow = "hidden";
     return () => {
       root.style.overflow = previous;
     };
-  }, [loading]);
+  }, [locked]);
 
-  // Reveal sounds: a whoosh as the columns lift, a chime as the name types in, then the music
+  // The intro's key clicks need audio: try now, and unlock on the first key press / tap
   useEffect(() => {
-    if (loading) return;
-    playSfx(whoosh, 0.15);
-    playSfx(chime, 0.6);
-    const timer = window.setTimeout(() => setIntroActive(false), MUSIC_AFTER_REVEAL_MS);
-    return () => window.clearTimeout(timer);
-  }, [loading]);
+    if (!introPlaying) {
+      setIntroActive(false);
+      return;
+    }
+    unlockAudio();
+    const onGesture = (e: Event) => {
+      if (e instanceof KeyboardEvent && (e.key === "Escape" || e.metaKey || e.ctrlKey)) return;
+      unlockAudio();
+    };
+    const gestures = ["keydown", "pointerdown", "touchend"] as const;
+    gestures.forEach((g) => window.addEventListener(g, onGesture, { capture: true, passive: true }));
+    return () => gestures.forEach((g) => window.removeEventListener(g, onGesture, { capture: true }));
+  }, [introPlaying]);
 
   useEffect(() => {
     const lenis = lenisRef.current;
-    if (loading) {
+    if (locked) {
       lenis?.stop();
       return;
     }
     window.scrollTo(0, 0);
     lenis?.scrollTo(0, { immediate: true, force: true });
     lenis?.start();
-  }, [loading, siteMounted]);
+  }, [locked]);
 
+  return null;
+};
+
+const Index = () => {
+  // The site mounts straight away under a short boot screen; once the hero's 3D world has compiled,
+  // the boot screen fades and the world plays its keyboard intro. Scrolling waits for that intro.
+  const [booted, setBooted] = useState(false);
+  const [sceneReady, setSceneReady] = useState(false);
+  const settled = useSettled(sceneReady);
+  const loading = !booted;
+  const handleSceneReady = useCallback(() => setSceneReady(true), []);
+  const handleBooted = useCallback(() => setBooted(true), []);
+  const intro = useMemo(() => ({ revealed: booted, sceneReady: handleSceneReady }), [booted, handleSceneReady]);
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <AnimatePresence>{loading && <Loader onReady={handleReady} onDone={handleDone} />}</AnimatePresence>
+      <AnimatePresence>{loading && <Loader ready={settled} onDone={handleBooted} />}</AnimatePresence>
 
-      {siteMounted && (
-        <IntroContext.Provider value={intro}>
+      <IntroContext.Provider value={intro}>
           <SmoothScroll>
             <div className="relative min-h-screen overflow-x-clip bg-background text-foreground">
               <Background />
@@ -171,7 +206,7 @@ const Index = () => {
             </div>
           </SmoothScroll>
         </IntroContext.Provider>
-      )}
+      <IntroLock loading={loading} />
     </ThemeProvider>
   );
 };

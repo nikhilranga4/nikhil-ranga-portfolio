@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
 
 type Kind = "cube" | "pyramid" | "ring";
 
@@ -102,8 +102,7 @@ const Ring = ({ color }: { color: number }) => (
   </>
 );
 
-const Shape = ({ spec }: { spec: ShapeSpec }) => {
-  const { scrollY } = useScroll();
+const Shape = ({ spec, scrollY }: { spec: ShapeSpec; scrollY: MotionValue<number> }) => {
   const drift = useTransform(scrollY, (v) => v * spec.speed);
   const y = useSpring(drift, { stiffness: 60, damping: 20, mass: 0.6 });
   const rotateZ = useTransform(scrollY, (v) => v * 0.05 * (spec.speed < -0.3 ? -1 : 1));
@@ -128,12 +127,14 @@ const Shape = ({ spec }: { spec: ShapeSpec }) => {
 /** Glassy CSS-3D shapes scattered down the page margins, tumbling and parallaxing on scroll. */
 const FloatingShapes = () => {
   const reduceMotion = useReducedMotion();
+  // One scroll tracker shared by every shape (each one measures the page when it mounts)
+  const { scrollY } = useScroll();
   if (reduceMotion) return null;
 
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-70 dark:opacity-80">
+    <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-70 dark:opacity-80 [html[data-hero=on]_&]:hidden">
       {SHAPES.map((spec, i) => (
-        <Shape key={i} spec={spec} />
+        <Shape key={i} spec={spec} scrollY={scrollY} />
       ))}
     </div>
   );

@@ -8,19 +8,31 @@ import { MenuToggle } from "@/components/ui/menu-toggle";
 import { MOBILE_MENU_ID, NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import { useIntroRevealed } from "@/lib/intro";
+import { useHeroReady } from "@/lib/hero-state";
 
 const Navbar = () => {
-  const revealed = useIntroRevealed();
+  // Hidden while the hero's door scene plays; slides in once the room (and its copy) is up
+  const introRevealed = useIntroRevealed();
+  const heroReady = useHeroReady();
+  const revealed = introRevealed && heroReady;
   const [active, setActive] = useState("home");
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const topSentinel = useRef<HTMLDivElement>(null);
+
+  // Keep the hidden bar out of the tab order
+  useEffect(() => {
+    if (headerRef.current) headerRef.current.inert = !revealed;
+  }, [revealed]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    // "Scrolled" = a 24px marker at the top of the page has left the viewport. An observer
+    // instead of reading window.scrollY on every scroll event, which forces a full-page layout.
+    const top = new IntersectionObserver(([entry]) => setScrolled(!entry.isIntersecting));
+    if (topSentinel.current) top.observe(topSentinel.current);
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -36,7 +48,7 @@ const Navbar = () => {
     });
 
     return () => {
-      window.removeEventListener("scroll", onScroll);
+      top.disconnect();
       observer.disconnect();
     };
   }, []);
@@ -54,10 +66,12 @@ const Navbar = () => {
 
   return (
     <>
+      <div ref={topSentinel} aria-hidden className="pointer-events-none absolute left-0 top-0 h-6 w-px" />
       <motion.header
+        ref={headerRef}
         initial={{ y: -80, opacity: 0 }}
         animate={revealed ? { y: 0, opacity: 1 } : { y: -80, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 120, damping: 18, delay: 0.5 }}
+        transition={{ type: "spring", stiffness: 120, damping: 18, delay: revealed ? 0.35 : 0 }}
         className="fixed inset-x-0 top-3 z-50 flex justify-center px-3 sm:px-4"
       >
         <nav

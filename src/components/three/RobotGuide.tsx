@@ -112,20 +112,26 @@ const RobotGuide = ({ colors, reduceMotion }: RobotGuideProps) => {
     };
     mixer.addEventListener("finished", onFinished);
 
-    const onScroll = () => {
-      const next = detectSection();
+    const goTo = (next: string) => {
       if (next !== sectionRef.current) {
         sectionRef.current = next;
         setSection(next);
       }
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    onScroll();
+    // Whichever section crosses the middle of the viewport. An observer rather than measuring
+    // every section on each scroll event, which forces a full-page layout every time.
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach((entry) => entry.isIntersecting && goTo(entry.target.id)),
+      { rootMargin: "-50% 0px -50% 0px" }
+    );
+    ORDER.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+    goTo(detectSection());
     return () => {
       mixer.removeEventListener("finished", onFinished);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      observer.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mixer]);
@@ -139,8 +145,9 @@ const RobotGuide = ({ colors, reduceMotion }: RobotGuideProps) => {
     if (!mover.current || !turner.current) return;
     const wp = WAYPOINTS[sectionRef.current];
 
-    // Scroll velocity (px/s), preferring Lenis' smoothed value
-    const y = window.scrollY;
+    // Scroll velocity (px/s), preferring Lenis' smoothed value (and its position: reading
+    // window.scrollY every frame would force a layout)
+    const y = lenisRef.current ? lenisRef.current.scroll : window.scrollY;
     const measured = (y - lastScroll.current.y) / Math.max(delta, 1e-4);
     lastScroll.current.y = y;
     const velocity = lenisRef.current ? lenisRef.current.velocity * 60 : measured;
