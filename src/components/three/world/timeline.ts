@@ -53,7 +53,7 @@ export const SCROLL = {
 
 /** The road, far below the room: the camera falls straight down to it */
 export const STREET_Y = -70;
-/** The avenue runs along +x (up the screen once we're hovering above it), six lanes wide */
+/** The avenue starts out along +x (up the screen once we're hovering above it), six lanes wide; see route.ts for its corners */
 export const ROAD = { z: -14, lane: 3.5, lanes: 6 } as const;
 export const ROAD_HALF = (ROAD.lane * ROAD.lanes) / 2;
 /** Where along the road we land (just past the room, so the tower is in view at first) */
@@ -143,21 +143,6 @@ export function dropProgress(w: WorldState) {
 
 /** Scroll position where the camera has landed and the convoy takes over */
 export const landedAt = (w: WorldState) => w.heroEnd + DROP_AFTER * w.vh;
-
-/** The hovering camera's position along the road for the current scroll */
-export const roadCameraX = (w: WorldState) => ROAD_X0 + CAMERA_DRIFT * roadScale(w.vw) * Math.max(0, w.scroll - landedAt(w));
-
-/**
- * Where a point of the page (CSS px, page coordinates) is on the card plane right now. The camera
- * looks straight down with screen-up along +x and screen-right along +z, so the mapping is one
- * uniform scale. Writes [x, z].
- */
-export function pageToRoad(w: WorldState, pageX: number, pageY: number, out: { x: number; z: number }) {
-  const k = roadScale(w.vw);
-  out.x = roadCameraX(w) - (pageY - w.scroll - w.vh / 2) * k;
-  out.z = ROAD.z + (pageX - w.vw / 2) * k;
-  return out;
-}
 
 /**
  * How far we are into the free fall (0 in the room, 1 once falling), and how much of the day

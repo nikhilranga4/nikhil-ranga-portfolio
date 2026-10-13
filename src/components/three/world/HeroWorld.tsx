@@ -15,6 +15,7 @@ import { IntroKeyboard, KEYBOARD_POS } from "./IntroKeyboard";
 import { Precompile } from "./Precompile";
 import { RoadScene } from "./RoadScene";
 import { ROOM, Room } from "./Room";
+import { cameraPose } from "./route";
 import {
   INTRO,
   KEY_TIMES,
@@ -28,7 +29,6 @@ import {
   landedAt,
   fallBlend,
   hoverHeight,
-  roadCameraX,
   smooth,
   span,
   type WorldState,
@@ -36,6 +36,7 @@ import {
 
 
 const BG = "#020809";
+const THREE_ORIGIN = new THREE.Vector3();
 const KEY_PAN = NAME_ROWS.flatMap((row) => row.split("").map((_, i) => (i / (row.length - 1) - 0.5) * 0.8));
 const TAN_HALF_FOV = Math.tan(THREE.MathUtils.degToRad(20));
 
@@ -190,8 +191,11 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
       p2: new THREE.Vector3(),
       m: new THREE.Matrix4(),
       qLook: new THREE.Quaternion(),
-      // Looking straight down, the top of the screen pointing up the road (+x)
-      qDown: new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -1, 0), new THREE.Vector3(1, 0, 0))),
+      // Looking straight down, the top of the screen pointing up the road (along its heading)
+      qDown: new THREE.Quaternion(),
+      down: new THREE.Vector3(0, -1, 0),
+      up: new THREE.Vector3(),
+      pose: { x: 0, z: 0, heading: 0 },
       landed: false,
       pos: new THREE.Vector3(),
       look: new THREE.Vector3(),
@@ -239,7 +243,12 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
     // Then the drop: out through the window, straight down, braking into a hover above the road
     const dropP = w.reduceMotion ? (w.fall > 0.3 ? 1 : 0) : dropProgress(w);
     const hover = hoverHeight(size.width, size.height);
-    tmp.hoverPos.set(roadCameraX(w), STREET_Y + hover, ROAD.z);
+    const pose = cameraPose(w, tmp.pose);
+    tmp.hoverPos.set(pose.x, STREET_Y + hover, pose.z);
+    // The road turns at every section: the camera turns with it, so its heading stays screen-up
+    tmp.up.set(Math.cos(pose.heading), 0, Math.sin(pose.heading));
+    tmp.m.lookAt(THREE_ORIGIN, tmp.down, tmp.up);
+    tmp.qDown.setFromRotationMatrix(tmp.m);
     let turn = 0;
     if (dropP > 0) {
       tmp.m.lookAt(tmp.pos, tmp.look, camera.up);
