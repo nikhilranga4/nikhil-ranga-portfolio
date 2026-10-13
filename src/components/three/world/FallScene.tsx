@@ -31,7 +31,8 @@ interface Tower {
  */
 function cityLayout(): Tower[] {
   const rand = rng(5);
-  const towers: Tower[] = [];
+  // The tower we fell from (the room hangs off its face), seen at the top of the screen
+  const towers: Tower[] = [{ x: 0, z: 15.2, w: 30, d: 30, top: -0.4 }];
   for (const side of [-1, 1]) {
     for (let z = -12; z > -170; z -= 13 + rand() * 9) {
       towers.push({ x: side * (16 + rand() * 7), z, w: 6 + rand() * 4, d: 6 + rand() * 5, top: -10 + rand() * 40 });
@@ -88,6 +89,7 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
   const mats = useMemo(
     () => ({
       towers: new THREE.MeshBasicMaterial({ map: tex.winNight }),
+      roofs: new THREE.MeshBasicMaterial({ color: "#0c1416" }),
       street: new THREE.MeshBasicMaterial({ map: tex.streetNight }),
       debris: new THREE.MeshMatcapMaterial({ matcap: sharedMatcap(), color: new THREE.Color(neonA).lerp(new THREE.Color("#d8f4f1"), 0.7), transparent: true, opacity: 0.55, side: THREE.DoubleSide }),
       wind: new THREE.LineBasicMaterial({ color: "#cdeeea", transparent: true, opacity: 0, depthWrite: false }),
@@ -100,6 +102,8 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
   useEffect(() => () => Object.values(mats).forEach((m) => m.dispose()), [mats]);
 
   const box = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
+  const roofGeo = useMemo(() => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), []);
+  useEffect(() => () => roofGeo.dispose(), [roofGeo]);
   const shardGeo = useMemo(() => new THREE.CylinderGeometry(0.22, 0.22, 0.02, 3), []);
   useEffect(
     () => () => {
@@ -114,18 +118,19 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
   const windCount = lite ? 50 : 110;
   const debris = useMemo(() => {
     const rand = rng(31);
+    // Around and below the camera; they fall faster than we do, shrinking away toward the street
     return Array.from({ length: debrisCount }, () => ({
-      x: (rand() - 0.5) * 11,
-      z: -2.5 - rand() * 11,
-      y: rand() * 18,
-      speed: 0.12 + rand() * 0.35,
+      x: (rand() - 0.5) * 14,
+      z: (rand() - 0.5) * 14,
+      y: rand() * 22,
+      speed: 0.5 + rand() * 0.6,
       spin: new THREE.Vector3((rand() - 0.5) * 3, (rand() - 0.5) * 3, (rand() - 0.5) * 3),
       scale: 0.5 + rand() * 1.4,
     }));
   }, [debrisCount]);
   const windSeeds = useMemo(() => {
     const rand = rng(43);
-    return Array.from({ length: windCount }, () => ({ x: (rand() - 0.5) * 14, z: -2 - rand() * 14, y: rand() * 22, len: 0.5 + rand() * 1.3 }));
+    return Array.from({ length: windCount }, () => ({ x: (rand() - 0.5) * 16, z: (rand() - 0.5) * 16, y: rand() * 22, len: 0.5 + rand() * 1.3 }));
   }, [windCount]);
   const windGeo = useMemo(() => {
     const g = new THREE.BufferGeometry();
@@ -136,6 +141,7 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
 
   const root = useRef<THREE.Group>(null);
   const towers = useRef<THREE.InstancedMesh>(null);
+  const roofs = useRef<THREE.InstancedMesh>(null);
   const street = useRef<THREE.Mesh>(null);
   const debrisMesh = useRef<THREE.InstancedMesh>(null);
   const near = useRef<THREE.Group>(null);
@@ -168,7 +174,19 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
     const tint = new THREE.Color();
     layout.forEach((_, i) => mesh.setColorAt(i, tint.setScalar(0.6 + ((i * 37) % 11) / 18)));
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [layout]);
+    // Flat roofs on top (seen from above, they read as roofs rather than more windows)
+    const r = roofs.current;
+    if (!r) return;
+    layout.forEach((t, i) => {
+      dummy.position.set(t.x, t.top + 0.03, t.z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(t.w, 1, t.d);
+      dummy.updateMatrix();
+      r.setMatrixAt(i, dummy.matrix);
+    });
+    r.instanceMatrix.needsUpdate = true;
+    r.computeBoundingSphere();
+  }, [layout, dummy]);
 
   useFrame(() => {
     const w = world.current;
@@ -191,6 +209,7 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
     if (mode !== s.mode) {
       s.mode = mode;
       mats.towers.map = mode === "day" ? tex.winDay : tex.winNight;
+      mats.roofs.color.set(mode === "day" ? "#a7b3ba" : "#0c1416");
       mats.street.map = mode === "day" ? tex.streetDay : tex.streetNight;
       mats.sky.map = mode === "day" ? tex.sky : tex.skyNight;
       mats.towers.needsUpdate = mats.street.needsUpdate = mats.sky.needsUpdate = true;
@@ -214,8 +233,8 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
     const mesh = debrisMesh.current;
     if (mesh) {
       debris.forEach((d, i) => {
-        // Debris falls a little slower than we do, so it drifts up past the camera
-        const y = wrap(d.y + travel * d.speed, 18) + 2;
+        // Debris falls faster than we do: it drops away below, toward the street
+        const y = wrap(d.y - travel * d.speed, 22) - 6;
         dummy.position.set(d.x, y, d.z);
         dummy.rotation.set(d.spin.x * travel, d.spin.y * travel, d.spin.z * travel);
         dummy.scale.setScalar(d.scale);
@@ -247,6 +266,7 @@ export function FallScene({ world, neonA, lite }: FallSceneProps) {
       </mesh>
       <sprite ref={sun} material={mats.sun} scale={[60, 60, 1]} />
       <instancedMesh ref={towers} args={[box, mats.towers, layout.length]} />
+      <instancedMesh ref={roofs} args={[roofGeo, mats.roofs, layout.length]} />
       <mesh ref={street} material={mats.street} rotation={[-Math.PI / 2, 0, 0]} position={[0, -100, -90]}>
         <planeGeometry args={[220, 320]} />
       </mesh>

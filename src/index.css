@@ -296,6 +296,44 @@
       inset 0 1px 0 rgb(255 255 255 / 0.06),
       inset 0 0 0 1px hsl(var(--brand-1) / 0.12);
   }
+  /* The slab's shadow on the ground below it (FallIn animates it as the slab falls) */
+  .fall-shadow {
+    background: rgb(15 40 60 / 0.45);
+    filter: blur(28px);
+    transform: translate(0, 18px);
+    opacity: 0.6;
+  }
+  .dark .fall-shadow {
+    background: rgb(0 0 0 / 0.8);
+  }
+  /*
+   * Seen from the camera above, a slab leans in perspective as it slides into and out of view
+   * and lies flat while it's being read. Scroll-driven CSS (no JS); browsers without scroll
+   * timelines simply keep it flat.
+   */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .fall-tilt {
+        animation: fall-tilt linear both;
+        animation-timeline: view();
+      }
+    }
+  }
+  @keyframes fall-tilt {
+    entry 0% {
+      transform: perspective(1600px) rotateX(18deg) scale(0.93);
+    }
+    entry 45% {
+      transform: none;
+    }
+    exit 55% {
+      transform: none;
+    }
+    exit 100% {
+      transform: perspective(1600px) rotateX(-14deg) scale(0.95);
+    }
+  }
+
   /* Edge flash when a slab lands */
   .glass-slab::after {
     content: "";

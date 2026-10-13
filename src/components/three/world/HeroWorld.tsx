@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { MotionValue } from "framer-motion";
 import * as THREE from "three";
 import type { PaletteColors } from "@/lib/palettes";
-import type { IntroStage } from "@/lib/hero-state";
+import { worldImpact, type IntroStage } from "@/lib/hero-state";
 import { lenisRef } from "@/lib/lenis";
 import { playSfx, setIntroActive } from "@/lib/music";
 import { chime, enterThunk, keyClick, whoosh } from "@/lib/music/sfx";
@@ -22,7 +22,7 @@ import {
   easeInOut,
   fallBlend,
   fallCameraY,
-  fallDepth,
+  fallCameraZ,
   smooth,
   span,
   type WorldState,
@@ -114,8 +114,10 @@ function Driver({ world, active }: { world: MutableRefObject<WorldState>; active
       world.current.busyUntil = Math.max(world.current.busyUntil, performance.now() + ms);
       invalidate();
     };
+    worldImpact.wake = () => world.current.wake(700);
     return () => {
       world.current.wake = () => undefined;
+      worldImpact.wake = () => undefined;
     };
   }, [world, invalidate]);
   useEffect(() => {
@@ -188,12 +190,12 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
       tmp.pos.y += Math.cos(w.progress * 1300) * shake;
     }
     const drop = easeInOut(span(w.progress, SCROLL.drop));
-    const [, landing] = fallDepth(w.fall, w.fallMax);
     const fallY = fallCameraY(w.fall, w.fallMax);
-    tmp.fallPos.set(0, fallY, IMPACT.z - 0.2);
-    // Looking out over the avenue (towers streaming up either side); level once landed. Narrow
-    // portrait screens turn a little toward one row of towers so it fills part of the view
-    tmp.fallLook.set(w.portrait ? 4.5 : 0, fallY - 1.3 * (1 - landing * 0.9), IMPACT.z - 9);
+    const fallZ = fallCameraZ(w.fall, w.fallMax);
+    tmp.fallPos.set(0, fallY, fallZ);
+    // Looking down from above: the street far below, towers converging around the avenue, and
+    // the top of the screen toward the tower we fell from
+    tmp.fallLook.set(0, fallY - 10, fallZ + 1.3);
     if (drop > 0) {
       tmp.pos.lerp(tmp.fallPos, drop);
       tmp.look.lerp(tmp.fallLook, drop);
@@ -215,6 +217,13 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
     w.velocity = THREE.MathUtils.damp(w.velocity, 0, 2.5, step);
     // Buffeted a little by the wind while falling
     if (!w.reduceMotion && w.fall > 0) tmp.pos.x += THREE.MathUtils.clamp(w.velocity, -3, 3) * 0.05;
+    // A jolt when a falling section hits the ground
+    const since = (performance.now() - worldImpact.at) / 1000;
+    if (!w.reduceMotion && since < 0.45) {
+      const amp = (1 - since / 0.45) ** 2 * 0.12 * worldImpact.strength;
+      tmp.pos.x += Math.sin(since * 70) * amp;
+      tmp.pos.z += Math.cos(since * 55) * amp * 0.6;
+    }
     w.pointer.x = THREE.MathUtils.damp(w.pointer.x, pointerTarget.x, 3, step);
     w.pointer.y = THREE.MathUtils.damp(w.pointer.y, pointerTarget.y, 3, step);
     if (!w.reduceMotion) {

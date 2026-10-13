@@ -5,6 +5,17 @@ import { motionValue } from "framer-motion";
 export const heroProgress = motionValue(0);
 
 /**
+ * A falling section hitting the ground: the 3D world gives the camera a short jolt. `wake` is set
+ * by the world so it draws the frames for it (it only renders on demand).
+ */
+export const worldImpact = { at: -Infinity, strength: 0, wake: () => undefined as void };
+export function bumpWorld(strength = 1) {
+  worldImpact.at = performance.now();
+  worldImpact.strength = strength;
+  worldImpact.wake();
+}
+
+/**
  * Shared state of the hero's 3D intro, read outside the hero (the page shell locks scrolling
  * until the intro has played; the navbar waits for the room).
  *

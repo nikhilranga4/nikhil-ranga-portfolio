@@ -53,8 +53,15 @@ export const SCROLL = {
 
 /** World units fallen per viewport height scrolled after the hero */
 export const FALL_PER_VH = 6;
-/** Height of the camera above the glass floor's underside where the free fall begins */
+/**
+ * World units the camera glides along the avenue per viewport scrolled. Looking straight down with
+ * the top of the screen toward the tower we fell from, gliding away from it makes the city below
+ * move up the screen in step with the page.
+ */
+export const FALL_FORWARD_PER_VH = 2.6;
+/** Where the free fall begins: just under the broken glass floor */
 export const FALL_START_Y = -3.2;
+export const FALL_START_Z = -4.7;
 
 export interface WorldState {
   /** Seconds since the intro started (Infinity once skipped / finished, -1 before it starts) */
@@ -103,8 +110,8 @@ export function flicker(t: number, seed = 0) {
 
 /** Viewports of scroll over which the fall slows to a stop at street level */
 const LANDING = 1.3;
-/** Camera height above the street once landed */
-export const EYE_HEIGHT = 1.7;
+/** Camera height above the street once landed (it ends looking down on the street and rooftops) */
+export const EYE_HEIGHT = 22;
 
 /**
  * Fall depth in viewports, eased at the very end of the page so the camera decelerates and
@@ -123,16 +130,20 @@ export function fallDepth(fall: number, fallMax: number): [number, number] {
 /** Camera height for a fall position (world units) */
 export const fallCameraY = (fall: number, fallMax: number) => FALL_START_Y - FALL_PER_VH * fallDepth(fall, fallMax)[0];
 
+/** Camera position along the avenue for a fall position (world units, moving away from the tower) */
+export const fallCameraZ = (fall: number, fallMax: number) => FALL_START_Z - FALL_FORWARD_PER_VH * fallDepth(fall, fallMax)[0];
+
 /** Street level: where the camera comes to rest at the end of the page, minus eye height */
 export const streetLevel = (fallMax: number) => fallCameraY(Infinity, fallMax) - EYE_HEIGHT;
 
 /**
  * How far we are into the free fall (0 in the room, 1 once falling), and how much of the day
- * sky is showing (light mode only; the switch happens inside the cloud bank).
+ * sky is showing (light mode only).
  */
 export function fallBlend(w: WorldState) {
   // The open air shows through as soon as the glass breaks
   const inFall = smooth(Math.min(1, span(w.progress, [SCROLL.shatter[0], SCROLL.drop[1]]) * 0.85 + w.fall * 1.2));
-  const day = w.mode === "day" ? smooth(Math.min(1, w.fall * 1.6)) : 0;
+  // Light mode: daylight floods in as the glass breaks, fully day by the time we drop through
+  const day = w.mode === "day" ? smooth(Math.min(1, span(w.progress, [SCROLL.shatter[0], SCROLL.drop[1]]) * 1.1 + w.fall * 2)) : 0;
   return { inFall, day };
 }

@@ -6,7 +6,7 @@ import { glassCrack, glassShatter, whoosh } from "@/lib/music/sfx";
 import { DOOR } from "./Corridor";
 import { sharedMatcap } from "./keycap";
 import { ROOM } from "./Room";
-import { SCROLL, smooth, span, type WorldState } from "./timeline";
+import { SCROLL, smooth, span, streetLevel, type WorldState } from "./timeline";
 import { crackTexture, radialTexture } from "./textures";
 
 /** Where the floor gives way: in front of the desk, under the camera's tilted gaze */
@@ -150,10 +150,15 @@ export function GlassFloor({ world, neonA, count }: GlassFloorProps) {
     if (!mesh) return;
     mesh.visible = broken;
     if (!broken) return;
-    const t = shatterP * SHATTER_SECONDS;
+    // Keep falling through the free fall (faster than the camera), then lie on the street
+    const t = shatterP * SHATTER_SECONDS + w.fall * 1.2;
+    const ground = streetLevel(w.fallMax) + 0.03;
     shards.forEach((s, i) => {
-      dummy.position.set(s.p.x + s.v.x * t, s.p.y + s.v.y * t + 0.5 * GRAVITY * t * t, s.p.z + s.v.z * t);
-      dummy.rotation.set(s.spin.x * t, s.rot + s.spin.y * t, s.spin.z * t);
+      const y = s.p.y + s.v.y * t + 0.5 * GRAVITY * t * t;
+      const landed = y <= ground;
+      dummy.position.set(s.p.x + s.v.x * t, landed ? ground : y, s.p.z + s.v.z * t);
+      if (landed) dummy.rotation.set(0, s.rot + s.spin.y, 0);
+      else dummy.rotation.set(s.spin.x * t, s.rot + s.spin.y * t, s.spin.z * t);
       dummy.scale.setScalar(s.scale);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
