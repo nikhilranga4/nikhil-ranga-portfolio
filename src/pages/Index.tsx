@@ -8,7 +8,7 @@ import Education from "@/components/Education";
 import Experience from "@/components/Experience";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import Footer from "@/components/Footer";
-import FallIn from "@/components/FallIn";
+import RideIn from "@/components/RideIn";
 import GitHubContributions from "@/components/GitHubContributions";
 import Navbar from "@/components/Navbar";
 import Loader from "@/components/Loader";
@@ -257,30 +257,31 @@ const Index = () => {
 
               <main className="relative z-10">
                 <Hero />
-                {/* Past the hero, each section falls in from the broken floor as a glass slab */}
-                <FallIn index={0}>
+                {/* The drop to the road; then each section rides in on a truck in the convoy */}
+                <div aria-hidden className="h-[85svh]" />
+                <RideIn index={0}>
                   <About />
-                </FallIn>
-                <FallIn index={1}>
+                </RideIn>
+                <RideIn index={1}>
                   <Education />
-                </FallIn>
-                <FallIn index={2}>
+                </RideIn>
+                <RideIn index={2}>
                   <Experience />
-                </FallIn>
-                <FallIn index={3}>
+                </RideIn>
+                <RideIn index={3}>
                   <Skills />
-                </FallIn>
-                <FallIn index={4}>
+                </RideIn>
+                <RideIn index={4}>
                   <Projects />
-                </FallIn>
-                <FallIn index={5}>
+                </RideIn>
+                <RideIn index={5}>
                   <GitHubContributions />
-                </FallIn>
+                </RideIn>
               </main>
               <div className="relative z-10 pb-[18vh]">
-                <FallIn index={6}>
+                <RideIn index={6}>
                   <Footer />
-                </FallIn>
+                </RideIn>
               </div>
             </div>
           </SmoothScroll>

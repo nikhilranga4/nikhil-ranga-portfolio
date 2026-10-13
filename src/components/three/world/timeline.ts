@@ -47,21 +47,33 @@ export const SCROLL = {
   crack: [0.72, 0.8] as const,
   /** The floor shatters */
   shatter: [0.8, 0.92] as const,
-  /** The camera drops through the hole and turns to face the tower */
+  /** The camera drops through the hole toward the road (finishes just past the hero) */
   drop: [0.86, 1] as const,
 };
 
-/** World units fallen per viewport height scrolled after the hero */
-export const FALL_PER_VH = 6;
+/** The road, far below the room: the camera falls straight down to it */
+export const STREET_Y = -70;
+/** The avenue runs along +x (up the screen once we're hovering above it), six lanes wide */
+export const ROAD = { z: -14, lane: 3.5, lanes: 6 } as const;
+export const ROAD_HALF = (ROAD.lane * ROAD.lanes) / 2;
+/** Where along the road we land (just past the room, so the tower is in view at first) */
+export const ROAD_X0 = 4;
+/** The camera drifts along the road at this share of the convoy's speed */
+export const CAMERA_DRIFT = 0.6;
+/** Viewports scrolled past the hero over which the drop finishes */
+export const DROP_AFTER = 0.85;
+/** Height of the card plane above the road (the panels ride on the trucks) */
+export const CARD_PLANE = 3.2;
+const TAN_HALF_FOV = Math.tan(THREE.MathUtils.degToRad(20));
+
 /**
- * World units the camera drifts along the tower's face per viewport scrolled, so the city opens
- * up past the tower's corner as we fall.
+ * World units per CSS pixel at the card plane. Phones see a narrower stretch of road, so the
+ * trucks stay a sensible size next to the cards.
  */
-export const FALL_DRIFT_PER_VH = 1.4;
-/** Where the free fall begins: just under the broken glass floor, outside the tower's face */
-export const FALL_START_Y = -3.2;
-export const FALL_START_X = -1.5;
-export const FALL_START_Z = -4.6;
+export const roadScale = (vw: number) => (vw >= 1024 ? 30 : vw >= 640 ? 24 : 19) / vw;
+
+/** Camera height above the road that makes the card plane map 1:1 onto the page */
+export const hoverHeight = (vw: number, vh: number) => CARD_PLANE + (roadScale(vw) * vh) / (2 * TAN_HALF_FOV);
 
 export interface WorldState {
   /** Seconds since the intro started (Infinity once skipped / finished, -1 before it starts) */
@@ -79,11 +91,20 @@ export interface WorldState {
   wake: (ms?: number) => void;
   /** Viewports scrolled past the end of the hero (0 inside it) */
   fall: number;
-  /** Viewports available to fall before the end of the page (the street landing) */
-  fallMax: number;
+  /** Page scroll (CSS px), read from Lenis on the frame it moves the page */
+  scroll: number;
+  /** Scroll position where the hero's pinned track ends */
+  heroEnd: number;
+  /** Viewports of hero scroll the drop beat takes */
+  heroDropVh: number;
+  /** Viewport size (CSS px) */
+  vw: number;
+  vh: number;
+  /** Timestamp of the frame being drawn (same clock as the page's animations) */
+  now: number;
   /** Scroll velocity in viewports per second (for wind and sway) */
   velocity: number;
-  /** Sky for the free fall: the visitor's light/dark mode */
+  /** Sky and street lighting: the visitor's light/dark mode */
   mode: "night" | "day";
 }
 
@@ -108,33 +129,32 @@ export function flicker(t: number, seed = 0) {
   return 0;
 }
 
-/** Viewports of scroll over which the fall slows to a stop at street level */
-const LANDING = 1.3;
-/** Camera height above the street once landed (a little above the street lights) */
-export const EYE_HEIGHT = 6;
+/** Street level (shards and debris come to rest there) */
+export const streetLevel = () => STREET_Y;
 
-/**
- * Fall depth in viewports, eased at the very end of the page so the camera decelerates and
- * touches down instead of stopping dead. Returns [depth, landing 0–1].
- */
-export function fallDepth(fall: number, fallMax: number): [number, number] {
-  const max = Math.max(fallMax, LANDING + 0.5);
-  const f = Math.min(Math.max(fall, 0), max);
-  const start = max - LANDING;
-  if (f <= start) return [f, 0];
-  const u = (f - start) / LANDING;
-  // Slope 1 where it joins the free fall, 0 at the end
-  return [start + LANDING * 0.5 * (1 - (1 - u) * (1 - u)), u];
+/** 0 at the start of the drop, 1 once hovering over the road */
+export function dropProgress(w: WorldState) {
+  const inHero = span(w.progress, SCROLL.drop) * w.heroDropVh;
+  return clamp01((inHero + w.fall) / (w.heroDropVh + DROP_AFTER));
 }
 
-/** Camera height for a fall position (world units) */
-export const fallCameraY = (fall: number, fallMax: number) => FALL_START_Y - FALL_PER_VH * fallDepth(fall, fallMax)[0];
+/** Scroll position where the camera has landed and the convoy takes over */
+export const landedAt = (w: WorldState) => w.heroEnd + DROP_AFTER * w.vh;
 
-/** Camera drift along the tower's face for a fall position (world units) */
-export const fallCameraX = (fall: number, fallMax: number) => FALL_START_X + FALL_DRIFT_PER_VH * fallDepth(fall, fallMax)[0];
+/** The hovering camera's position along the road for the current scroll */
+export const roadCameraX = (w: WorldState) => ROAD_X0 + CAMERA_DRIFT * roadScale(w.vw) * Math.max(0, w.scroll - landedAt(w));
 
-/** Street level: where the camera comes to rest at the end of the page, minus eye height */
-export const streetLevel = (fallMax: number) => fallCameraY(Infinity, fallMax) - EYE_HEIGHT;
+/**
+ * Where a point of the page (CSS px, page coordinates) is on the card plane right now. The camera
+ * looks straight down with screen-up along +x and screen-right along +z, so the mapping is one
+ * uniform scale. Writes [x, z].
+ */
+export function pageToRoad(w: WorldState, pageX: number, pageY: number, out: { x: number; z: number }) {
+  const k = roadScale(w.vw);
+  out.x = roadCameraX(w) - (pageY - w.scroll - w.vh / 2) * k;
+  out.z = ROAD.z + (pageX - w.vw / 2) * k;
+  return out;
+}
 
 /**
  * How far we are into the free fall (0 in the room, 1 once falling), and how much of the day

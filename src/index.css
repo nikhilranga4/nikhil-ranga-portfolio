@@ -278,63 +278,23 @@
 
 @layer components {
   /*
-   * A page section as a slab of glass falling past the 3D city (see FallIn). Near-opaque fills
-   * instead of backdrop blur: blur over a moving WebGL scene is costly on integrated GPUs.
+   * A page section as a glass panel riding on a truck in the convoy (see RideIn). Near-opaque
+   * fills instead of backdrop blur, and a tight static shadow (the soft one is drawn on the road
+   * in 3D): blur and big shadows over the moving WebGL scene are costly on integrated GPUs.
    */
   .glass-slab {
-    background: rgb(255 255 255 / 0.88);
-    border: 1px solid rgb(15 40 60 / 0.08);
+    background: rgb(255 255 255 / 0.96);
+    border: 1px solid rgb(15 40 60 / 0.1);
     box-shadow:
-      0 50px 120px -50px rgb(15 40 60 / 0.5),
+      0 2px 0 rgb(15 40 60 / 0.06),
       inset 0 1px 0 rgb(255 255 255 / 0.8);
   }
   .dark .glass-slab {
-    background: rgb(4 14 16 / 0.86);
+    background: rgb(4 14 16 / 0.95);
     border-color: rgb(255 255 255 / 0.08);
     box-shadow:
-      0 60px 140px -40px rgb(0 0 0 / 0.9),
       inset 0 1px 0 rgb(255 255 255 / 0.06),
       inset 0 0 0 1px hsl(var(--brand-1) / 0.12);
-  }
-  /*
-   * The slab's soft shadow on the ground below it (FallIn animates it as the slab settles). A
-   * radial gradient rather than a blur filter: blurred layers composited over the moving WebGL
-   * scene were halving the frame rate on integrated GPUs.
-   */
-  .fall-shadow {
-    background: radial-gradient(closest-side, rgb(15 40 60 / 0.4), rgb(15 40 60 / 0.18) 60%, transparent);
-    transform: translate(0, 18px);
-    opacity: 0.6;
-  }
-  .dark .fall-shadow {
-    background: radial-gradient(closest-side, rgb(0 0 0 / 0.75), rgb(0 0 0 / 0.35) 60%, transparent);
-  }
-
-  /* Edge flash when a slab lands */
-  .glass-slab::after {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    pointer-events: none;
-    opacity: 0;
-  }
-  .glass-slab.slab-landed::after {
-    animation: slab-land 1.4s ease-out;
-  }
-  @keyframes slab-land {
-    0% {
-      opacity: 1;
-      box-shadow:
-        0 0 0 2px hsl(var(--brand-1) / 0.9),
-        0 0 70px 8px hsl(var(--brand-1) / 0.45);
-    }
-    100% {
-      opacity: 0;
-      box-shadow:
-        0 0 0 1px hsl(var(--brand-1) / 0),
-        0 0 120px 30px hsl(var(--brand-1) / 0);
-    }
   }
 
   .glass {

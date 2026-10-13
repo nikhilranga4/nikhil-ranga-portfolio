@@ -3,28 +3,31 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import type { MotionValue } from "framer-motion";
 import * as THREE from "three";
 import type { PaletteColors } from "@/lib/palettes";
-import { worldImpact, type IntroStage } from "@/lib/hero-state";
-import { lenisRef } from "@/lib/lenis";
+import { convoy } from "@/lib/convoy";
+import { bumpWorld, worldImpact, type IntroStage } from "@/lib/hero-state";
+import { afterScrollFrame, lenisRef } from "@/lib/lenis";
 import { playSfx, setIntroActive } from "@/lib/music";
-import { chime, enterThunk, keyClick, whoosh } from "@/lib/music/sfx";
+import { chime, enterThunk, keyClick, landThud, whoosh } from "@/lib/music/sfx";
 import { Corridor, DOOR } from "./Corridor";
-import { FallScene } from "./FallScene";
 import { FloatingKeys } from "./FloatingKeys";
 import { GlassFloor, IMPACT } from "./GlassFloor";
 import { IntroKeyboard, KEYBOARD_POS } from "./IntroKeyboard";
 import { Precompile } from "./Precompile";
+import { RoadScene } from "./RoadScene";
 import { Room } from "./Room";
 import {
   INTRO,
   KEY_TIMES,
   NAME_ROWS,
+  ROAD,
+  ROAD_X0,
   SCROLL,
+  STREET_Y,
+  dropProgress,
   easeInOut,
   fallBlend,
-  FALL_START_Z,
-  fallCameraX,
-  fallCameraY,
-  fallDepth,
+  hoverHeight,
+  roadCameraX,
   smooth,
   span,
   type WorldState,
@@ -103,33 +106,65 @@ function Director({ world, revealed, onStage }: { world: MutableRefObject<WorldS
   return null;
 }
 
-// ── Render on demand: frames only while something is moving ───────────────
+// ── Render on demand, on the scroll's own frame ─────────────────────────────
+
+const readScroll = () => lenisRef.current?.scroll ?? window.scrollY;
 
 /**
  * The canvas only draws while the intro plays, the visitor scrolls or moves the pointer, or
  * something is still settling (a short grace period afterwards). Idle, it costs nothing.
+ *
+ * Frames are drawn right after the smooth scroller has moved the page, in the same animation
+ * frame, so the trucks under the section cards never trail them by a frame. Without the smooth
+ * scroller (reduced motion) a plain animation-frame loop does the same job.
  */
-function Driver({ world, active }: { world: MutableRefObject<WorldState>; active: boolean }) {
-  const invalidate = useThree((s) => s.invalidate);
+function Driver({ world, compiled }: { world: MutableRefObject<WorldState>; compiled: boolean }) {
+  const advance = useThree((s) => s.advance);
   useEffect(() => {
-    world.current.wake = (ms = 1600) => {
-      world.current.busyUntil = Math.max(world.current.busyUntil, performance.now() + ms);
-      invalidate();
-    };
-    worldImpact.wake = () => world.current.wake(700);
-    return () => {
-      world.current.wake = () => undefined;
-      worldImpact.wake = () => undefined;
-    };
-  }, [world, invalidate]);
-  useEffect(() => {
-    if (active) world.current.wake();
-  }, [active, world]);
-  useFrame(() => {
     const w = world.current;
-    const intro = w.intro >= 0 && w.intro !== Infinity;
-    if (intro || performance.now() < w.busyUntil) invalidate();
-  });
+    w.wake = (ms = 1600) => {
+      w.busyUntil = Math.max(w.busyUntil, performance.now() + ms);
+    };
+    worldImpact.wake = () => w.wake(700);
+    convoy.wake = (ms = 1600) => w.wake(ms);
+    return () => {
+      w.wake = () => undefined;
+      worldImpact.wake = () => undefined;
+      convoy.wake = () => undefined;
+    };
+  }, [world]);
+
+  useEffect(() => {
+    if (!compiled) return;
+    const w = world.current;
+    w.wake(1200);
+    let last = -1;
+    const tick = (time: number) => {
+      if (time === last) return;
+      last = time;
+      const y = readScroll();
+      if (y !== w.scroll) {
+        w.scroll = y;
+        w.fall = Math.max(0, (y - w.heroEnd) / w.vh);
+        w.wake(900);
+      }
+      const intro = w.intro >= 0 && w.intro !== Infinity;
+      if (!intro && performance.now() >= w.busyUntil) return;
+      w.now = time;
+      advance(time);
+    };
+    afterScrollFrame.add(tick);
+    let raf = 0;
+    const own = (time: number) => {
+      if (!lenisRef.current) tick(time);
+      raf = requestAnimationFrame(own);
+    };
+    raf = requestAnimationFrame(own);
+    return () => {
+      afterScrollFrame.delete(tick);
+      cancelAnimationFrame(raf);
+    };
+  }, [world, compiled, advance]);
   return null;
 }
 
@@ -146,8 +181,15 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
       roomPos: new THREE.Vector3(),
       roomLook: new THREE.Vector3(),
       tiltPos: new THREE.Vector3(0.15, 2.9, -2.5),
-      fallPos: new THREE.Vector3(),
-      fallLook: new THREE.Vector3(),
+      hoverPos: new THREE.Vector3(),
+      p0: new THREE.Vector3(),
+      p1: new THREE.Vector3(),
+      p2: new THREE.Vector3(),
+      m: new THREE.Matrix4(),
+      qLook: new THREE.Quaternion(),
+      // Looking straight down, the top of the screen pointing up the road (+x)
+      qDown: new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -1, 0), new THREE.Vector3(1, 0, 0))),
+      landed: false,
       pos: new THREE.Vector3(),
       look: new THREE.Vector3(),
       curve: new THREE.CatmullRomCurve3([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]),
@@ -191,18 +233,39 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
       tmp.pos.x += Math.sin(w.progress * 900) * shake;
       tmp.pos.y += Math.cos(w.progress * 1300) * shake;
     }
-    const drop = easeInOut(span(w.progress, SCROLL.drop));
-    const fallY = fallCameraY(w.fall, w.fallMax);
-    const fallX = fallCameraX(w.fall, w.fallMax);
-    const [, landing] = fallDepth(w.fall, w.fallMax);
-    tmp.fallPos.set(fallX, fallY, FALL_START_Z);
-    // Falling beside the tower's face (on the right, its windows streaming up), looking out and
-    // down over the city; levelling out as we touch down on the avenue
-    tmp.fallLook.set(fallX + 10, fallY - 6.2 * (1 - landing) - 0.6 * landing, FALL_START_Z - 2.2);
-    if (drop > 0) {
-      tmp.pos.lerp(tmp.fallPos, drop);
-      tmp.look.lerp(tmp.fallLook, drop);
+    // Then the drop: through the hole, straight down, braking into a hover above the road
+    const dropP = w.reduceMotion ? (w.fall > 0.3 ? 1 : 0) : dropProgress(w);
+    const hover = hoverHeight(size.width, size.height);
+    tmp.hoverPos.set(roadCameraX(w), STREET_Y + hover, ROAD.z);
+    let turn = 0;
+    if (dropP > 0) {
+      tmp.m.lookAt(tmp.pos, tmp.look, camera.up);
+      tmp.qLook.setFromRotationMatrix(tmp.m);
+      // Accelerating fall, then a firm brake (the two halves meet at the same speed)
+      const S = 0.72;
+      const g = dropP < S ? S * (dropP / S) ** 2 : S + (1 - S) * (1 - (1 - (dropP - S) / (1 - S)) ** 2);
+      tmp.p0.copy(tmp.pos);
+      tmp.p1.set(IMPACT.x, -12, IMPACT.z);
+      tmp.p2.set(ROAD_X0, STREET_Y + hover + 24, ROAD.z);
+      const a = (1 - g) ** 3;
+      const b = 3 * (1 - g) ** 2 * g;
+      const c = 3 * (1 - g) * g * g;
+      const d = g ** 3;
+      tmp.pos.set(
+        a * tmp.p0.x + b * tmp.p1.x + c * tmp.p2.x + d * tmp.hoverPos.x,
+        a * tmp.p0.y + b * tmp.p1.y + c * tmp.p2.y + d * tmp.hoverPos.y,
+        a * tmp.p0.z + b * tmp.p1.z + c * tmp.p2.z + d * tmp.hoverPos.z
+      );
+      turn = smooth(Math.min(1, dropP * 1.7));
     }
+    // Touchdown: a thud and a jolt, once per forward crossing
+    if (dropP >= 0.985 && !tmp.landed) {
+      tmp.landed = true;
+      if (!w.reduceMotion) {
+        playSfx(landThud);
+        bumpWorld(0.9);
+      }
+    } else if (dropP < 0.8) tmp.landed = false;
 
     // Intro: start on the keyboard, pull back to the door after Enter
     if (!w.reduceMotion && w.intro !== Infinity) {
@@ -210,7 +273,7 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
       tmp.pos.copy(tmp.introPos).lerp(tmp.doorPos, back);
       tmp.look.copy(tmp.introLook).lerp(tmp.doorLook, back);
     }
-    if (w.reduceMotion) {
+    if (w.reduceMotion && dropP < 1) {
       tmp.pos.copy(tmp.roomPos);
       tmp.look.copy(tmp.roomLook);
     }
@@ -219,8 +282,8 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
     const step = Math.min(delta, 1 / 20);
     w.velocity = THREE.MathUtils.damp(w.velocity, 0, 2.5, step);
     // Buffeted a little by the wind while falling
-    if (!w.reduceMotion && w.fall > 0) tmp.pos.x += THREE.MathUtils.clamp(w.velocity, -3, 3) * 0.05;
-    // A jolt when a falling section hits the ground
+    if (!w.reduceMotion && dropP > 0 && dropP < 1) tmp.pos.z += THREE.MathUtils.clamp(w.velocity, -3, 3) * 0.06;
+    // A jolt on touchdown
     const since = (performance.now() - worldImpact.at) / 1000;
     if (!w.reduceMotion && since < 0.45) {
       const amp = (1 - since / 0.45) ** 2 * 0.12 * worldImpact.strength;
@@ -229,12 +292,16 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
     }
     w.pointer.x = THREE.MathUtils.damp(w.pointer.x, pointerTarget.x, 3, step);
     w.pointer.y = THREE.MathUtils.damp(w.pointer.y, pointerTarget.y, 3, step);
-    if (!w.reduceMotion) {
-      tmp.pos.x += w.pointer.x * 0.18;
-      tmp.pos.y += w.pointer.y * 0.1;
+    // Pointer parallax in the hero only: over the road the camera must stay exactly on its rails
+    // (the section cards are mapped onto it)
+    if (!w.reduceMotion && dropP < 1) {
+      tmp.pos.x += w.pointer.x * 0.18 * (1 - dropP);
+      tmp.pos.y += w.pointer.y * 0.1 * (1 - dropP);
     }
     cam.position.copy(tmp.pos);
-    cam.lookAt(tmp.look);
+    const introOn = !w.reduceMotion && w.intro !== Infinity;
+    if (turn > 0 && !introOn) cam.quaternion.copy(tmp.qLook).slerp(tmp.qDown, turn);
+    else cam.lookAt(tmp.look);
   });
   return null;
 }
@@ -276,46 +343,52 @@ function Floor() {
   );
 }
 
-// ── Scroll inputs for the fall ─────────────────────────────────────────────
+// ── Scroll inputs ──────────────────────────────────────────────────────────
 
 /**
- * How far the page has scrolled past the hero, in viewports. Reads the Lenis scroll value (a
- * number, no layout); the hero's end and the page length are measured only when sizes change.
+ * Sizes for the drop and the road: where the hero ends, how long its drop beat is, the viewport.
+ * Measured only when sizes change; the scroll itself is read per frame by the Driver. Scroll
+ * events only feed the wind (velocity) and wake the canvas.
  */
-function useFallInputs(world: MutableRefObject<WorldState>) {
+function useRoadInputs(world: MutableRefObject<WorldState>) {
   useEffect(() => {
-    let heroEnd = Infinity;
-    let vh = window.innerHeight;
-    let lastY = 0;
+    let lastY = readScroll();
     let lastT = performance.now();
-    const scrollY = () => lenisRef.current?.scroll ?? window.scrollY;
-    const update = () => {
-      const y = scrollY();
+    const onScroll = () => {
+      const w = world.current;
+      const y = readScroll();
       const now = performance.now();
-      const v = (y - lastY) / vh / (Math.max(16, now - lastT) / 1000);
+      const v = (y - lastY) / w.vh / (Math.max(16, now - lastT) / 1000);
       lastY = y;
       lastT = now;
-      world.current.velocity = THREE.MathUtils.lerp(world.current.velocity, v, 0.35);
-      world.current.fall = Math.max(0, (y - heroEnd) / vh);
-      world.current.wake(900);
+      w.velocity = THREE.MathUtils.lerp(w.velocity, v, 0.35);
+      w.wake(900);
     };
     const measure = () => {
-      vh = window.innerHeight;
+      const w = world.current;
+      w.vw = window.innerWidth;
+      w.vh = window.innerHeight;
       const track = document.querySelector<HTMLElement>("#home > div");
-      if (track) heroEnd = track.getBoundingClientRect().top + scrollY() + track.offsetHeight - vh;
-      const pageEnd = document.documentElement.scrollHeight - vh;
-      world.current.fallMax = Math.max(1, (pageEnd - heroEnd) / vh);
-      update();
+      if (track) {
+        let top = 0;
+        for (let e: HTMLElement | null = track; e; e = e.offsetParent as HTMLElement | null) top += e.offsetTop;
+        const length = track.offsetHeight - w.vh;
+        w.heroEnd = top + length;
+        w.heroDropVh = ((SCROLL.drop[1] - SCROLL.drop[0]) * length) / w.vh;
+      }
+      w.scroll = readScroll();
+      w.fall = Math.max(0, (w.scroll - w.heroEnd) / w.vh);
+      w.wake(900);
     };
     const resize = new ResizeObserver(measure);
     resize.observe(document.body);
     window.addEventListener("resize", measure);
-    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
     measure();
     return () => {
       resize.disconnect();
       window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", update);
+      window.removeEventListener("scroll", onScroll);
     };
   }, [world]);
 }
@@ -338,8 +411,8 @@ export interface HeroWorldProps {
 
 /**
  * The site's single, page-wide 3D world, fixed behind the page. The hero (keyboard, door, room,
- * glass floor) plays on the hero's pinned scroll; past it, the page scroll drives the free fall
- * down to the street.
+ * glass floor) plays on the hero's pinned scroll; past it the camera drops to the road and hovers
+ * over the convoy that carries the page's sections.
  */
 const HeroWorld = ({ progress, revealed, portrait, mode, reduceMotion, colors, onReady, onStage }: HeroWorldProps) => {
   const world = useRef<WorldState>({
@@ -351,14 +424,19 @@ const HeroWorld = ({ progress, revealed, portrait, mode, reduceMotion, colors, o
     busyUntil: 0,
     wake: () => undefined,
     fall: 0,
-    fallMax: 1,
+    scroll: 0,
+    heroEnd: Infinity,
+    heroDropVh: 0.6,
+    vw: window.innerWidth,
+    vh: window.innerHeight,
+    now: 0,
     velocity: 0,
     mode,
   });
   world.current.portrait = portrait;
   world.current.reduceMotion = reduceMotion;
   world.current.mode = mode;
-  useFallInputs(world);
+  useRoadInputs(world);
 
   useEffect(
     () =>
@@ -394,7 +472,7 @@ const HeroWorld = ({ progress, revealed, portrait, mode, reduceMotion, colors, o
 
   return (
     <Canvas
-      frameloop={compiled ? "demand" : "never"}
+      frameloop="never"
       dpr={1}
       onCreated={({ gl, setDpr }) => {
         const low = isLowEndGpu(gl, portrait);
@@ -410,7 +488,7 @@ const HeroWorld = ({ progress, revealed, portrait, mode, reduceMotion, colors, o
       <ambientLight intensity={0.16} color="#5fa8a4" />
       <hemisphereLight args={["#2a5254", "#050808", 0.5]} />
 
-      <Driver world={world} active />
+      <Driver world={world} compiled={compiled} />
       <Atmosphere world={world} />
       <Director world={world} revealed={revealed} onStage={onStage} />
       <Rig world={world} />
@@ -421,7 +499,7 @@ const HeroWorld = ({ progress, revealed, portrait, mode, reduceMotion, colors, o
         <Corridor world={world} neonA={neonA} neonB={neonB} />
         <Room neonA={neonA} neonB={neonB} />
         <GlassFloor world={world} neonA={neonA} count={lite ? 70 : 140} />
-        <FallScene world={world} neonA={neonA} lite={lite} />
+        <RoadScene world={world} lite={lite} />
         <IntroKeyboard world={world} ramp={[colors.c1, colors.c2, colors.c3]} />
         <FloatingKeys world={world} colors={colors} />
         <Precompile onCompiled={() => setCompiled(true)} onReady={onReady} />

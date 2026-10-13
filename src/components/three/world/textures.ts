@@ -382,3 +382,84 @@ export function avenueTexture(variant: "night" | "day") {
   return texture;
 }
 
+
+/**
+ * Six-lane road seen from above, one 12-unit stretch along the road (u) by its full width (v):
+ * asphalt grain, dashed lane lines, a double yellow centre line and solid edge lines.
+ */
+export function roadTexture(variant: "night" | "day") {
+  const W = 256;
+  const H = 512;
+  const texture = canvasTexture(W, H, (ctx) => {
+    const rand = rng(variant === "night" ? 21 : 22);
+    ctx.fillStyle = variant === "night" ? "#1e2629" : "#5d6468";
+    ctx.fillRect(0, 0, W, H);
+    // Grain and tyre-worn bands down the middle of each lane
+    for (let i = 0; i < 2600; i++) {
+      const v = variant === "night" ? 22 + rand() * 26 : 80 + rand() * 40;
+      ctx.fillStyle = `rgba(${v},${v + 4},${v + 6},0.35)`;
+      ctx.fillRect(rand() * W, rand() * H, 1 + rand() * 2, 1 + rand() * 2);
+    }
+    const lane = H / 6;
+    ctx.fillStyle = variant === "night" ? "rgba(0,0,0,0.18)" : "rgba(30,34,36,0.16)";
+    for (let i = 0; i < 6; i++) {
+      ctx.fillRect(0, i * lane + lane * 0.22, W, lane * 0.14);
+      ctx.fillRect(0, i * lane + lane * 0.64, W, lane * 0.14);
+    }
+    const white = variant === "night" ? "rgba(225,232,232,0.7)" : "rgba(250,250,245,0.92)";
+    ctx.fillStyle = white;
+    // Edge lines
+    ctx.fillRect(0, 6, W, 5);
+    ctx.fillRect(0, H - 11, W, 5);
+    // Dashed lane lines (4 on, 8 off per 12 units)
+    for (const i of [1, 2, 4, 5]) ctx.fillRect(0, i * lane - 2, W / 3, 4);
+    // Double yellow in the middle
+    ctx.fillStyle = variant === "night" ? "rgba(255,196,90,0.75)" : "rgba(255,206,64,0.95)";
+    ctx.fillRect(0, H / 2 - 7, W, 4);
+    ctx.fillRect(0, H / 2 + 3, W, 4);
+  });
+  texture.wrapS = THREE.RepeatWrapping;
+  return texture;
+}
+
+/** A zebra crossing: white bars across the full width of the road */
+export function zebraTexture() {
+  return canvasTexture(64, 512, (ctx) => {
+    ctx.clearRect(0, 0, 64, 512);
+    ctx.fillStyle = "rgba(245,245,240,0.92)";
+    for (let y = 12; y < 500; y += 30) ctx.fillRect(4, y, 56, 16);
+  });
+}
+
+/** Soft-edged rounded rectangle, for shadows cast on the road */
+export function softRectTexture() {
+  return canvasTexture(
+    128,
+    128,
+    (ctx) => {
+      ctx.clearRect(0, 0, 128, 128);
+      ctx.filter = "blur(14px)";
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.roundRect(30, 30, 68, 68, 18);
+      ctx.fill();
+    },
+    false
+  );
+}
+
+/** The yellow "OVERSIZE LOAD" plate on the back of a wide-load trailer */
+export function oversizeTexture() {
+  return canvasTexture(512, 128, (ctx) => {
+    ctx.fillStyle = "#f6c41a";
+    ctx.fillRect(0, 0, 512, 128);
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(8, 8, 496, 112);
+    ctx.fillStyle = "#111";
+    ctx.font = "bold 62px Arial, Helvetica, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("OVERSIZE LOAD", 256, 68);
+  });
+}

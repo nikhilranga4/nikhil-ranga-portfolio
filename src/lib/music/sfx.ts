@@ -230,3 +230,62 @@ export function glassClink(ctx: BaseAudioContext, out: AudioNode, t: number, ind
   tinkle(ctx, panned(ctx, out, (jitter(index, 21) - 0.5) * 0.8), t + 0.07, pitch * 1.34, 0.02);
 }
 
+
+/** Touching down over the road after the fall: a deep body thump with a gritty edge. */
+export function landThud(ctx: BaseAudioContext, out: AudioNode, t: number) {
+  thock(ctx, out, t, 120, 38, 0.6, 0.5);
+  thock(ctx, out, t + 0.012, 70, 30, 0.35, 0.65);
+  burst(ctx, out, t, { type: "lowpass", freq: 420, q: 0.8, level: 0.3, decay: 0.28, offset: 0.12 });
+  burst(ctx, out, t + 0.01, { type: "bandpass", freq: 1500, q: 0.9, level: 0.06, decay: 0.18, offset: 0.4 });
+}
+
+/** A truck braking into place: a short squeal, then the air brakes letting go. */
+export function airBrake(ctx: BaseAudioContext, out: AudioNode, t: number, index = 0, pan = 0) {
+  const dest = panned(ctx, out, pan);
+  // Brake squeal, a little different per truck
+  const osc = ctx.createOscillator();
+  osc.type = "sawtooth";
+  const pitch = 1700 + jitter(index, 30) * 900;
+  osc.frequency.setValueAtTime(pitch, t);
+  osc.frequency.exponentialRampToValueAtTime(pitch * 0.82, t + 0.35);
+  const band = ctx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = pitch;
+  band.Q.value = 8;
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(0.025, t + 0.06);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+  osc.connect(band).connect(env).connect(dest);
+  osc.start(t);
+  osc.stop(t + 0.42);
+  // The "pssht" of air
+  burst(ctx, dest, t + 0.3, { type: "highpass", freq: 3200, q: 0.6, level: 0.1, decay: 0.55, offset: jitter(index, 31) * 0.5 });
+  burst(ctx, dest, t + 0.3, { type: "bandpass", freq: 6500, q: 0.8, level: 0.05, decay: 0.4, offset: jitter(index, 32) * 0.5 });
+}
+
+/** Two short horn toots (a truck's deep two-tone). */
+export function horn(ctx: BaseAudioContext, out: AudioNode, t: number, pan = 0) {
+  const dest = panned(ctx, out, pan);
+  for (const [at, len] of [
+    [0, 0.16],
+    [0.24, 0.3],
+  ] as const) {
+    for (const f of [233, 294]) {
+      const osc = ctx.createOscillator();
+      osc.type = "square";
+      osc.frequency.value = f;
+      const low = ctx.createBiquadFilter();
+      low.type = "lowpass";
+      low.frequency.value = 1400;
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0.0001, t + at);
+      env.gain.exponentialRampToValueAtTime(0.035, t + at + 0.02);
+      env.gain.setValueAtTime(0.035, t + at + len - 0.04);
+      env.gain.exponentialRampToValueAtTime(0.0001, t + at + len);
+      osc.connect(low).connect(env).connect(dest);
+      osc.start(t + at);
+      osc.stop(t + at + len + 0.02);
+    }
+  }
+}

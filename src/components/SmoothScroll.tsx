@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import Lenis from "lenis";
-import { lenisRef } from "@/lib/lenis";
+import { afterScrollFrame, lenisRef } from "@/lib/lenis";
 
 /**
  * Buttery inertia scrolling via Lenis. Also routes every in-page `#anchor` link through Lenis so
@@ -16,6 +16,7 @@ const SmoothScroll = ({ children }: { children: ReactNode }) => {
     let raf = 0;
     const loop = (time: number) => {
       lenis.raf(time);
+      afterScrollFrame.forEach((fn) => fn(time));
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);

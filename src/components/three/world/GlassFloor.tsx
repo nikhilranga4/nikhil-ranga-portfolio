@@ -6,7 +6,7 @@ import { glassCrack, glassShatter, whoosh } from "@/lib/music/sfx";
 import { DOOR } from "./Corridor";
 import { sharedMatcap } from "./keycap";
 import { ROOM } from "./Room";
-import { SCROLL, smooth, span, streetLevel, type WorldState } from "./timeline";
+import { SCROLL, dropProgress, smooth, span, streetLevel, type WorldState } from "./timeline";
 import { crackTexture, radialTexture } from "./textures";
 
 /** Where the floor gives way: in front of the desk, under the camera's tilted gaze */
@@ -150,9 +150,9 @@ export function GlassFloor({ world, neonA, count }: GlassFloorProps) {
     if (!mesh) return;
     mesh.visible = broken;
     if (!broken) return;
-    // Keep falling through the free fall (faster than the camera), then lie on the street
-    const t = shatterP * SHATTER_SECONDS + w.fall * 1.2;
-    const ground = streetLevel(w.fallMax) + 0.03;
+    // Keep falling ahead of the camera's drop, then lie scattered on the road
+    const t = shatterP * SHATTER_SECONDS + dropProgress(w) * 3.4;
+    const ground = streetLevel() + 0.03;
     shards.forEach((s, i) => {
       const y = s.p.y + s.v.y * t + 0.5 * GRAVITY * t * t;
       const landed = y <= ground;
