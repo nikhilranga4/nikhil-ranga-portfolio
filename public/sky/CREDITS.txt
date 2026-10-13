@@ -1,0 +1,4 @@
+Skies from Poly Haven (polyhaven.com), CC0 1.0 (public domain):
+- sky-night.jpg: HDRI "rogland_clear_night"
+- sky-day.jpg: HDRI "kloofendal_48d_partly_cloudy_puresky"
+Converted from the 1k HDRIs to graded JPGs.
