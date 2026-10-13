@@ -4,7 +4,7 @@
  */
 const Background = () => {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-0 overflow-hidden [html[data-hero=on]_&]:hidden">
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-0 overflow-hidden">
       {/* Aurora blobs */}
       <div className="absolute -left-[10%] -top-[15%] h-[55vmax] w-[55vmax] animate-blob rounded-full bg-brand-1/25 blur-[110px] dark:bg-brand-1/20" />
       <div

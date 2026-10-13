@@ -4,14 +4,29 @@ import type { MotionValue } from "framer-motion";
 import * as THREE from "three";
 import type { PaletteColors } from "@/lib/palettes";
 import type { IntroStage } from "@/lib/hero-state";
+import { lenisRef } from "@/lib/lenis";
 import { playSfx, setIntroActive } from "@/lib/music";
 import { chime, enterThunk, keyClick, whoosh } from "@/lib/music/sfx";
-import { Corridor } from "./Corridor";
+import { Corridor, DOOR } from "./Corridor";
+import { FallScene } from "./FallScene";
 import { FloatingKeys } from "./FloatingKeys";
+import { GlassFloor, IMPACT } from "./GlassFloor";
 import { IntroKeyboard, KEYBOARD_POS } from "./IntroKeyboard";
 import { Precompile } from "./Precompile";
 import { Room } from "./Room";
-import { INTRO, KEY_TIMES, NAME_ROWS, SCROLL, easeInOut, smooth, span, type WorldState } from "./timeline";
+import {
+  INTRO,
+  KEY_TIMES,
+  NAME_ROWS,
+  SCROLL,
+  easeInOut,
+  fallBlend,
+  fallCameraY,
+  fallDepth,
+  smooth,
+  span,
+  type WorldState,
+} from "./timeline";
 
 
 const BG = "#020809";
@@ -126,6 +141,9 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
       doorLook: new THREE.Vector3(0, 1.32, 0),
       roomPos: new THREE.Vector3(),
       roomLook: new THREE.Vector3(),
+      tiltPos: new THREE.Vector3(0.15, 2.9, -2.5),
+      fallPos: new THREE.Vector3(),
+      fallLook: new THREE.Vector3(),
       pos: new THREE.Vector3(),
       look: new THREE.Vector3(),
       curve: new THREE.CatmullRomCurve3([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]),
@@ -139,9 +157,9 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
     const cam = camera as THREE.PerspectiveCamera;
 
     // Fit the keyboard (about 3.4 wide) and the door bay (about 2.7 wide, 5.4 tall) on any screen
-    const kbDist = Math.max(3.6, (aspect < 1 ? 3.45 : 4.2) / (2 * TAN_HALF_FOV * aspect));
+    const kbDist = Math.max(3.6, (aspect < 1 ? 3.35 : 4.2) / (2 * TAN_HALF_FOV * aspect));
     tmp.introLook.copy(KEYBOARD_POS).add(new THREE.Vector3(0, 0.05, 0));
-    tmp.introPos.copy(tmp.introLook).add(new THREE.Vector3(0, 0.42, 0.9).normalize().multiplyScalar(kbDist));
+    tmp.introPos.copy(tmp.introLook).add(new THREE.Vector3(0, 0.3, 0.95).normalize().multiplyScalar(kbDist * 0.92));
     const doorDist = Math.max(7.4, 2.8 / (2 * TAN_HALF_FOV * aspect));
     tmp.doorPos.set(0, 1.5, doorDist);
     tmp.roomPos.set(0, 1.42, -2.25);
@@ -158,6 +176,29 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
     tmp.curve.getPoint(fly, tmp.pos);
     tmp.look.copy(tmp.doorLook).lerp(tmp.roomLook, smooth(fly * 1.15));
 
+    // After the room: tilt down at the glass, shake as it shatters, drop through, then fall
+    const tilt = easeInOut(span(w.progress, SCROLL.tilt));
+    if (tilt > 0) {
+      tmp.pos.lerp(tmp.tiltPos, tilt);
+      tmp.look.lerp(IMPACT, tilt);
+    }
+    const shake = Math.sin(Math.min(1, span(w.progress, [SCROLL.shatter[0], SCROLL.shatter[0] + 0.07])) * Math.PI) * 0.06;
+    if (shake > 0) {
+      tmp.pos.x += Math.sin(w.progress * 900) * shake;
+      tmp.pos.y += Math.cos(w.progress * 1300) * shake;
+    }
+    const drop = easeInOut(span(w.progress, SCROLL.drop));
+    const [, landing] = fallDepth(w.fall, w.fallMax);
+    const fallY = fallCameraY(w.fall, w.fallMax);
+    tmp.fallPos.set(0, fallY, IMPACT.z - 0.2);
+    // Looking out over the avenue (towers streaming up either side); level once landed. Narrow
+    // portrait screens turn a little toward one row of towers so it fills part of the view
+    tmp.fallLook.set(w.portrait ? 4.5 : 0, fallY - 1.3 * (1 - landing * 0.9), IMPACT.z - 9);
+    if (drop > 0) {
+      tmp.pos.lerp(tmp.fallPos, drop);
+      tmp.look.lerp(tmp.fallLook, drop);
+    }
+
     // Intro: start on the keyboard, pull back to the door after Enter
     if (!w.reduceMotion && w.intro !== Infinity) {
       const back = w.intro < 0 ? 0 : easeInOut(span(w.intro, INTRO.pullBack));
@@ -171,6 +212,9 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
 
     // Drift toward the pointer (capped step, so the first frame after an idle pause can't jump)
     const step = Math.min(delta, 1 / 20);
+    w.velocity = THREE.MathUtils.damp(w.velocity, 0, 2.5, step);
+    // Buffeted a little by the wind while falling
+    if (!w.reduceMotion && w.fall > 0) tmp.pos.x += THREE.MathUtils.clamp(w.velocity, -3, 3) * 0.05;
     w.pointer.x = THREE.MathUtils.damp(w.pointer.x, pointerTarget.x, 3, step);
     w.pointer.y = THREE.MathUtils.damp(w.pointer.y, pointerTarget.y, 3, step);
     if (!w.reduceMotion) {
@@ -186,34 +230,105 @@ function Rig({ world }: { world: MutableRefObject<WorldState> }) {
 /** Raw pointer in -1..1, written by a window listener and eased by the rig. */
 const pointerTarget = new THREE.Vector2();
 
+// ── Atmosphere: room fog → open air → (light mode) day sky ──────────────────
+
+function Atmosphere({ world }: { world: MutableRefObject<WorldState> }) {
+  const scene = useThree((s) => s.scene);
+  const c = useMemo(
+    () => ({ room: new THREE.Color(BG), night: new THREE.Color("#04111a"), day: new THREE.Color("#cfe3f0"), mix: new THREE.Color() }),
+    []
+  );
+  useFrame(() => {
+    const { inFall, day } = fallBlend(world.current);
+    c.mix.copy(c.room).lerp(c.night, inFall).lerp(c.day, day);
+    if (scene.fog instanceof THREE.FogExp2) {
+      scene.fog.color.copy(c.mix);
+      scene.fog.density = THREE.MathUtils.lerp(THREE.MathUtils.lerp(0.055, 0.016, inFall), 0.009, day);
+    }
+    if (scene.background instanceof THREE.Color) scene.background.copy(c.mix);
+  });
+  return null;
+}
+
 // ── Floor ──────────────────────────────────────────────────────────────────
 
-/** Wet concrete: a plain sheen that catches the coral and teal lights (no mirror pass). */
+/** The corridor's wet concrete (the room beyond the door has its own glass floor). */
 function Floor() {
+  const depth = 12.5 + DOOR.wall;
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 1.5]}>
-      <planeGeometry args={[18, 22]} />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 12.5 - depth / 2]}>
+      <planeGeometry args={[18, depth]} />
       <meshStandardMaterial color="#0d1415" roughness={0.5} metalness={0.4} />
     </mesh>
   );
 }
 
+// ── Scroll inputs for the fall ─────────────────────────────────────────────
+
+/**
+ * How far the page has scrolled past the hero, in viewports. Reads the Lenis scroll value (a
+ * number, no layout); the hero's end and the page length are measured only when sizes change.
+ */
+function useFallInputs(world: MutableRefObject<WorldState>) {
+  useEffect(() => {
+    let heroEnd = Infinity;
+    let vh = window.innerHeight;
+    let lastY = 0;
+    let lastT = performance.now();
+    const scrollY = () => lenisRef.current?.scroll ?? window.scrollY;
+    const update = () => {
+      const y = scrollY();
+      const now = performance.now();
+      const v = (y - lastY) / vh / (Math.max(16, now - lastT) / 1000);
+      lastY = y;
+      lastT = now;
+      world.current.velocity = THREE.MathUtils.lerp(world.current.velocity, v, 0.35);
+      world.current.fall = Math.max(0, (y - heroEnd) / vh);
+      world.current.wake(900);
+    };
+    const measure = () => {
+      vh = window.innerHeight;
+      const track = document.querySelector<HTMLElement>("#home > div");
+      if (track) heroEnd = track.getBoundingClientRect().top + scrollY() + track.offsetHeight - vh;
+      const pageEnd = document.documentElement.scrollHeight - vh;
+      world.current.fallMax = Math.max(1, (pageEnd - heroEnd) / vh);
+      update();
+    };
+    const resize = new ResizeObserver(measure);
+    resize.observe(document.body);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", update, { passive: true });
+    measure();
+    return () => {
+      resize.disconnect();
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", update);
+    };
+  }, [world]);
+}
+
 // ── The world ──────────────────────────────────────────────────────────────
 
 export interface HeroWorldProps {
+  /** Scroll progress through the pinned hero */
   progress: MotionValue<number>;
   /** The boot screen has lifted: start the intro */
   revealed: boolean;
-  /** Pause rendering when the hero is off-screen */
-  active: boolean;
   portrait: boolean;
+  /** Light mode gets a daytime sky for the fall */
+  mode: "night" | "day";
   reduceMotion: boolean;
   colors: PaletteColors;
   onReady: () => void;
   onStage: (stage: IntroStage) => void;
 }
 
-const HeroWorld = ({ progress, revealed, active, portrait, reduceMotion, colors, onReady, onStage }: HeroWorldProps) => {
+/**
+ * The site's single, page-wide 3D world, fixed behind the page. The hero (keyboard, door, room,
+ * glass floor) plays on the hero's pinned scroll; past it, the page scroll drives the free fall
+ * down to the street.
+ */
+const HeroWorld = ({ progress, revealed, portrait, mode, reduceMotion, colors, onReady, onStage }: HeroWorldProps) => {
   const world = useRef<WorldState>({
     intro: -1,
     progress: progress.get(),
@@ -222,9 +337,15 @@ const HeroWorld = ({ progress, revealed, active, portrait, reduceMotion, colors,
     reduceMotion,
     busyUntil: 0,
     wake: () => undefined,
+    fall: 0,
+    fallMax: 1,
+    velocity: 0,
+    mode,
   });
   world.current.portrait = portrait;
   world.current.reduceMotion = reduceMotion;
+  world.current.mode = mode;
+  useFallInputs(world);
 
   useEffect(
     () =>
@@ -249,22 +370,25 @@ const HeroWorld = ({ progress, revealed, active, portrait, reduceMotion, colors,
     };
   }, [reduceMotion]);
   // Theme switches ease the colours over a moment
-  useEffect(() => world.current.wake(1500), [colors]);
+  useEffect(() => world.current.wake(1500), [colors, mode]);
 
   // Nothing is drawn until every shader has compiled in the background: drawing earlier makes
   // the GPU driver compile them synchronously on the first frame and freezes the page for seconds
   const [compiled, setCompiled] = useState(false);
+  const [lite, setLite] = useState(portrait);
   const neonA = colors.c1;
   const neonB = colors.c2;
 
   return (
     <Canvas
-      frameloop={active && compiled ? "demand" : "never"}
+      frameloop={compiled ? "demand" : "never"}
       dpr={1}
       onCreated={({ gl, setDpr }) => {
-        if (!isLowEndGpu(gl, portrait)) setDpr(Math.min(window.devicePixelRatio || 1, 1.25));
+        const low = isLowEndGpu(gl, portrait);
+        setLite(low);
+        if (!low) setDpr(Math.min(window.devicePixelRatio || 1, 1.25));
       }}
-      camera={{ position: [0, 1.5, 7.4], fov: 40, near: 0.05, far: 60 }}
+      camera={{ position: [0, 1.5, 7.4], fov: 40, near: 0.05, far: 420 }}
       gl={{ antialias: true, powerPreference: "high-performance", stencil: false }}
       style={{ pointerEvents: "none" }}
     >
@@ -273,13 +397,16 @@ const HeroWorld = ({ progress, revealed, active, portrait, reduceMotion, colors,
       <ambientLight intensity={0.16} color="#5fa8a4" />
       <hemisphereLight args={["#2a5254", "#050808", 0.5]} />
 
-      <Driver world={world} active={active} />
+      <Driver world={world} active />
+      <Atmosphere world={world} />
       <Director world={world} revealed={revealed} onStage={onStage} />
       <Rig world={world} />
 
       <Floor />
       <Corridor world={world} neonA={neonA} neonB={neonB} />
       <Room neonA={neonA} neonB={neonB} />
+      <GlassFloor world={world} neonA={neonA} count={lite ? 70 : 140} />
+      <FallScene world={world} neonA={neonA} lite={lite} />
       <IntroKeyboard world={world} ramp={[colors.c1, colors.c2, colors.c3]} />
       <FloatingKeys world={world} colors={colors} />
       <Precompile onCompiled={() => setCompiled(true)} onReady={onReady} />

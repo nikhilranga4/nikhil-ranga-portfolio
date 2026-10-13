@@ -132,7 +132,7 @@ const FloatingShapes = () => {
   if (reduceMotion) return null;
 
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-70 dark:opacity-80 [html[data-hero=on]_&]:hidden">
+    <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-70 dark:opacity-80">
       {SHAPES.map((spec, i) => (
         <Shape key={i} spec={spec} scrollY={scrollY} />
       ))}

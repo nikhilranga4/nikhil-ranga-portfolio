@@ -1,6 +1,7 @@
 import { useRef, type ReactNode } from "react";
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useInsideFall } from "@/lib/fall";
 import { cn } from "@/lib/utils";
 
 interface ScrollReveal3DProps {
@@ -15,8 +16,21 @@ interface ScrollReveal3DProps {
 /**
  * Scroll-scrubbed 3D entrance: the element tilts up from the floor, rises and fades in as it
  * travels from the bottom of the viewport to its centre — and reverses when scrolling back.
+ * Inside a falling section slab it stays still: the slab's drop is the entrance there.
  */
-export function ScrollReveal3D({ children, className, direction = 0, tilt = 35 }: ScrollReveal3DProps) {
+export function ScrollReveal3D(props: ScrollReveal3DProps) {
+  const insideFall = useInsideFall();
+  if (insideFall) {
+    return (
+      <div className={props.className}>
+        <div className="h-full">{props.children}</div>
+      </div>
+    );
+  }
+  return <AnimatedReveal {...props} />;
+}
+
+function AnimatedReveal({ children, className, direction = 0, tilt = 35 }: ScrollReveal3DProps) {
   const ref = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
   // Phones get a calmer, straight-up rise so cards never look crooked mid-scroll

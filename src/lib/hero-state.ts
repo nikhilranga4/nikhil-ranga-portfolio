@@ -1,4 +1,8 @@
 import { useSyncExternalStore } from "react";
+import { motionValue } from "framer-motion";
+
+/** Scroll progress through the pinned hero (0–1). Written by the hero, read by the 3D world. */
+export const heroProgress = motionValue(0);
 
 /**
  * Shared state of the hero's 3D intro, read outside the hero (the page shell locks scrolling

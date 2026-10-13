@@ -147,3 +147,86 @@ export function chime(ctx: BaseAudioContext, out: AudioNode, t: number) {
     }
   });
 }
+
+/** A short bright tinkle: one shard of glass ringing off another. */
+function tinkle(ctx: BaseAudioContext, out: AudioNode, t: number, freq: number, level: number) {
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(freq, t);
+  osc.frequency.exponentialRampToValueAtTime(freq * 0.97, t + 0.25);
+  const ring = ctx.createOscillator();
+  ring.type = "triangle";
+  ring.frequency.value = freq * 2.76; // inharmonic partial, like a struck glass plate
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(level, t + 0.002);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+  const ringEnv = ctx.createGain();
+  ringEnv.gain.setValueAtTime(0.0001, t);
+  ringEnv.gain.exponentialRampToValueAtTime(level * 0.35, t + 0.002);
+  ringEnv.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  osc.connect(env).connect(out);
+  ring.connect(ringEnv).connect(out);
+  for (const o of [osc, ring]) {
+    o.start(t);
+    o.stop(t + 0.3);
+  }
+}
+
+/** The glass floor giving way: a sharp snap, then creaking fractures spreading out. */
+export function glassCrack(ctx: BaseAudioContext, out: AudioNode, t: number) {
+  const dest = panned(ctx, out, 0.1);
+  burst(ctx, dest, t, { type: "highpass", freq: 3200, q: 0.7, level: 0.42, decay: 0.035, offset: 0.12 });
+  burst(ctx, dest, t + 0.004, { type: "bandpass", freq: 1500, q: 2.5, level: 0.2, decay: 0.06, offset: 0.3 });
+  thock(ctx, dest, t + 0.002, 140, 60, 0.32, 0.18);
+  // Fractures racing outward: a few smaller snaps, each panned a little further
+  for (let i = 0; i < 6; i++) {
+    const at = t + 0.09 + i * 0.07 + jitter(i, 7) * 0.05;
+    const side = panned(ctx, out, (jitter(i, 8) - 0.5) * 1.2);
+    burst(ctx, side, at, { type: "bandpass", freq: 2400 + jitter(i, 9) * 3000, q: 3, level: 0.12 - i * 0.012, decay: 0.02, offset: jitter(i, 10) * 0.6 });
+  }
+  // Low creak under it all
+  const creak = ctx.createOscillator();
+  creak.type = "sawtooth";
+  creak.frequency.setValueAtTime(70, t + 0.05);
+  creak.frequency.exponentialRampToValueAtTime(42, t + 0.6);
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 380;
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0.0001, t + 0.05);
+  env.gain.exponentialRampToValueAtTime(0.06, t + 0.15);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + 0.65);
+  creak.connect(lp).connect(env).connect(out);
+  creak.start(t + 0.05);
+  creak.stop(t + 0.7);
+}
+
+/** The floor shattering: a broadband crash, a shower of ringing shards, then a rattling tail. */
+export function glassShatter(ctx: BaseAudioContext, out: AudioNode, t: number) {
+  burst(ctx, panned(ctx, out, -0.2), t, { type: "highpass", freq: 1800, q: 0.5, level: 0.5, decay: 0.22, offset: 0.05 });
+  burst(ctx, panned(ctx, out, 0.2), t + 0.01, { type: "bandpass", freq: 4200, q: 0.8, level: 0.3, decay: 0.35, offset: 0.45 });
+  burst(ctx, out, t, { type: "lowpass", freq: 500, q: 0.7, level: 0.35, decay: 0.12, offset: 0.7 });
+  thock(ctx, out, t, 110, 45, 0.42, 0.25);
+  // Shards ringing as they break apart and hit each other
+  for (let i = 0; i < 18; i++) {
+    const at = t + 0.02 + Math.pow(jitter(i, 11), 1.6) * 0.9;
+    const freq = 2000 + jitter(i, 12) * 5000;
+    tinkle(ctx, panned(ctx, out, (jitter(i, 13) - 0.5) * 1.6), at, freq, 0.07 * (1 - (at - t) / 1.1));
+  }
+  // Debris rattle
+  for (let i = 0; i < 10; i++) {
+    const at = t + 0.25 + i * 0.075 + jitter(i, 14) * 0.04;
+    burst(ctx, panned(ctx, out, (jitter(i, 15) - 0.5) * 1.4), at, { type: "bandpass", freq: 3000 + jitter(i, 16) * 2500, q: 4, level: 0.07 * (1 - i / 11), decay: 0.015, offset: jitter(i, 17) * 0.6 });
+  }
+}
+
+/** A falling glass section landing: a soft thud and two quiet clinks (kept low; it repeats). */
+export function glassClink(ctx: BaseAudioContext, out: AudioNode, t: number, index = 0) {
+  thock(ctx, out, t, 150, 70, 0.14, 0.12);
+  burst(ctx, out, t, { type: "lowpass", freq: 700, q: 0.7, level: 0.07, decay: 0.05, offset: jitter(index, 18) * 0.5 });
+  const pitch = 2600 + jitter(index, 19) * 1600;
+  tinkle(ctx, panned(ctx, out, (jitter(index, 20) - 0.5) * 0.8), t + 0.01, pitch, 0.035);
+  tinkle(ctx, panned(ctx, out, (jitter(index, 21) - 0.5) * 0.8), t + 0.07, pitch * 1.34, 0.02);
+}
+

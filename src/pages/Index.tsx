@@ -8,8 +8,7 @@ import Education from "@/components/Education";
 import Experience from "@/components/Experience";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import Footer from "@/components/Footer";
-import Background from "@/components/Background";
-import FloatingShapes from "@/components/FloatingShapes";
+import FallIn from "@/components/FallIn";
 import GitHubContributions from "@/components/GitHubContributions";
 import Navbar from "@/components/Navbar";
 import Loader from "@/components/Loader";
@@ -17,15 +16,18 @@ import ScrollProgress from "@/components/ScrollProgress";
 import CustomCursor from "@/components/CustomCursor";
 import SmoothScroll from "@/components/SmoothScroll";
 import BackToTop from "@/components/BackToTop";
-import { IntroContext } from "@/lib/intro";
+import { IntroContext, useIntroRevealed, useIntroSceneReady } from "@/lib/intro";
 import { lenisRef } from "@/lib/lenis";
 import { setIntroActive, unlockAudio } from "@/lib/music";
-import { useIntroStage } from "@/lib/hero-state";
+import { heroProgress, setIntroStage, useIntroStage, type IntroStage } from "@/lib/hero-state";
 
 /** Never hold the page longer than this, whatever happens to the 3D intro */
 const INTRO_FAILSAFE_MS = 14000;
 
 const Stage3D = lazy(() => import("@/components/three/Stage3D"));
+// Start fetching the 3D world right away; the boot screen waits for it to compile
+const worldImport = import("@/components/three/world/HeroWorld");
+const HeroWorld = lazy(() => worldImport);
 
 /** If WebGL fails for the overlay, just drop it — the page works fine without it. */
 class SilentBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -37,6 +39,69 @@ class SilentBoundary extends Component<{ children: ReactNode }, { failed: boolea
     return this.state.failed ? null : this.props.children;
   }
 }
+
+/** If WebGL fails for the world, drop it and skip straight past the intro. */
+class WorldBoundary extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {
+    this.props.onError();
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+function usePortrait() {
+  const query = "(max-aspect-ratio: 1/1)";
+  const [portrait, setPortrait] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = () => setPortrait(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+  return portrait;
+}
+
+/**
+ * The page-wide 3D world, fixed behind everything: the hero's keyboard, door and room, the glass
+ * floor breaking, and the free fall past the city that the sections drop through.
+ */
+const WorldLayer = () => {
+  const { colors, resolvedMode } = useTheme();
+  const reduceMotion = !!useReducedMotion();
+  const revealed = useIntroRevealed();
+  const sceneReady = useIntroSceneReady();
+  const portrait = usePortrait();
+  const onStage = useCallback((next: IntroStage) => setIntroStage(next), []);
+  const onError = useCallback(() => {
+    setIntroStage("done");
+    sceneReady();
+  }, [sceneReady]);
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+      <WorldBoundary onError={onError}>
+        <Suspense fallback={null}>
+          <HeroWorld
+            progress={heroProgress}
+            revealed={revealed}
+            portrait={portrait}
+            mode={resolvedMode === "light" ? "day" : "night"}
+            reduceMotion={reduceMotion}
+            colors={colors}
+            onReady={sceneReady}
+            onStage={onStage}
+          />
+        </Suspense>
+      </WorldBoundary>
+      {/* Vignette (CSS: cheaper than a post-processing pass); softer over the day sky */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_52%,rgb(2_8_9/0.4))] dark:bg-[radial-gradient(ellipse_at_center,transparent_48%,rgb(2_8_9/0.72))]" />
+    </div>
+  );
+};
 
 /** Global 3D overlay: the 3D cursor (mouse users) and the scroll-guide robot. */
 const GlobalStage = () => {
@@ -183,7 +248,7 @@ const Index = () => {
       <IntroContext.Provider value={intro}>
           <SmoothScroll>
             <div className="relative min-h-screen overflow-x-clip bg-background text-foreground">
-              <Background />
+              <WorldLayer />
               <ScrollProgress />
               <CustomCursor />
               <GlobalStage />
@@ -191,17 +256,31 @@ const Index = () => {
               <BackToTop />
 
               <main className="relative z-10">
-                <FloatingShapes />
                 <Hero />
-                <About />
-                <Education />
-                <Experience />
-                <Skills />
-                <Projects />
-                <GitHubContributions />
+                {/* Past the hero, each section falls in from the broken floor as a glass slab */}
+                <FallIn index={0}>
+                  <About />
+                </FallIn>
+                <FallIn index={1}>
+                  <Education />
+                </FallIn>
+                <FallIn index={2}>
+                  <Experience />
+                </FallIn>
+                <FallIn index={3}>
+                  <Skills />
+                </FallIn>
+                <FallIn index={4}>
+                  <Projects />
+                </FallIn>
+                <FallIn index={5}>
+                  <GitHubContributions />
+                </FallIn>
               </main>
-              <div className="relative z-10">
-                <Footer />
+              <div className="relative z-10 pb-[18vh]">
+                <FallIn index={6}>
+                  <Footer />
+                </FallIn>
               </div>
             </div>
           </SmoothScroll>

@@ -136,11 +136,13 @@ function FloatingKey({ spec, index, colors, world, hovered, register }: Floating
         s.drop += s.vel * h;
       }
     }
-    root.current.visible = t >= s.born - 0.05;
+    // They fly off as the floor starts to crack, and stay away for the fall
+    const exit = smooth(span(w.progress, [SCROLL.tilt[0] - 0.02, SCROLL.crack[1]]));
+    root.current.visible = t >= s.born - 0.05 && exit < 1;
 
     // Door layout → room layout, scattering outward while the camera flies through the door
     const blend = smooth(span(w.progress, [0.16, SCROLL.room - 0.04]));
-    const scatter = Math.sin(blend * Math.PI);
+    const scatter = Math.sin(blend * Math.PI) + exit * 2.2;
     const fx = THREE.MathUtils.lerp(spec.door[0], spec.room[0], blend);
     const fy = THREE.MathUtils.lerp(spec.door[1], spec.room[1], blend);
     const dist = (CAMERA_Z - spec.z) * NEAR;

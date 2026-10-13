@@ -219,3 +219,145 @@ export function plasticMatcap() {
     ctx.fillRect(0, 0, 256, 256);
   });
 }
+
+/**
+ * Fractured glass, centred on the impact point: radial cracks that fork as they run out, with
+ * a few concentric rings. White on transparent (tinted by the material).
+ */
+export function crackTexture() {
+  const rand = rng(41);
+  const texture = canvasTexture(
+    1024,
+    1024,
+    (ctx) => {
+      ctx.clearRect(0, 0, 1024, 1024);
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineCap = "round";
+      const cx = 512;
+      const cy = 512;
+      // Radial fractures, each wandering and forking
+      const crack = (x: number, y: number, angle: number, length: number, width: number) => {
+        let px = x;
+        let py = y;
+        let a = angle;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        const steps = Math.ceil(length / 18);
+        for (let i = 0; i < steps; i++) {
+          a += (rand() - 0.5) * 0.45;
+          px += Math.cos(a) * 18;
+          py += Math.sin(a) * 18;
+          ctx.lineTo(px, py);
+          if (rand() < 0.08 && width > 0.8) {
+            ctx.stroke();
+            crack(px, py, a + (rand() > 0.5 ? 0.6 : -0.6), length * 0.45 * rand(), width * 0.6);
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+          }
+        }
+        ctx.stroke();
+      };
+      for (let i = 0; i < 16; i++) crack(cx, cy, (i / 16) * Math.PI * 2 + rand() * 0.3, 260 + rand() * 260, 2.6);
+      // Concentric rings, broken into arcs
+      for (const r of [38, 90, 160]) {
+        ctx.lineWidth = r < 60 ? 2.2 : 1.4;
+        for (let a = 0; a < Math.PI * 2; a += 0.35 + rand() * 0.3) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r + (rand() - 0.5) * 10, a, a + 0.18 + rand() * 0.25);
+          ctx.stroke();
+        }
+      }
+      // Crushed centre
+      const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, 34);
+      core.addColorStop(0, "rgba(255,255,255,0.8)");
+      core.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = core;
+      ctx.fillRect(cx - 40, cy - 40, 80, 80);
+    },
+    false
+  );
+  return texture;
+}
+
+/**
+ * A tower's curtain wall: a grid of windows, some lit. Night: dark glass with warm and teal
+ * rooms. Day: sky-blue glass with bright reflections. Repeats seamlessly.
+ */
+export function windowsTexture(variant: "night" | "day") {
+  const rand = rng(variant === "night" ? 61 : 67);
+  const texture = canvasTexture(256, 512, (ctx) => {
+    ctx.fillStyle = variant === "night" ? "#0b161a" : "#5d87a6";
+    ctx.fillRect(0, 0, 256, 512);
+    for (let y = 0; y < 512; y += 16) {
+      for (let x = 0; x < 256; x += 16) {
+        const r = rand();
+        if (variant === "night") {
+          ctx.fillStyle =
+            r < 0.26 ? `rgba(255,${180 + rand() * 50},${120 + rand() * 40},${0.75 + rand() * 0.25})` : r < 0.36 ? `rgba(110,235,225,${0.6 + rand() * 0.4})` : "rgba(26,44,52,1)";
+        } else {
+          const l = 150 + rand() * 70;
+          ctx.fillStyle = r < 0.12 ? `rgb(${l + 40},${l + 55},${l + 60})` : `rgb(${l * 0.55},${l * 0.75},${l * 0.95})`;
+        }
+        ctx.fillRect(x + 2, y + 3, 12, 10);
+      }
+    }
+  });
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
+/** Wet street from above: dark asphalt, lane lines and pools of neon and streetlight. */
+export function streetTexture(variant: "night" | "day") {
+  const rand = rng(variant === "night" ? 71 : 73);
+  return canvasTexture(1024, 1024, (ctx) => {
+    ctx.fillStyle = variant === "night" ? "#0b1214" : "#7d878b";
+    ctx.fillRect(0, 0, 1024, 1024);
+    // Lane markings
+    ctx.fillStyle = variant === "night" ? "rgba(230,240,240,0.35)" : "rgba(255,255,255,0.8)";
+    for (let y = 0; y < 1024; y += 90) ctx.fillRect(506, y, 12, 50);
+    ctx.fillRect(250, 0, 6, 1024);
+    ctx.fillRect(768, 0, 6, 1024);
+    if (variant === "night") {
+      // Reflected neon and streetlights
+      for (let i = 0; i < 26; i++) {
+        const x = rand() * 1024;
+        const y = rand() * 1024;
+        const r = 30 + rand() * 90;
+        const teal = rand() > 0.5;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, teal ? "rgba(25,227,212,0.45)" : "rgba(255,122,92,0.4)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+    } else {
+      // Puddles catching the sky
+      for (let i = 0; i < 16; i++) {
+        const x = rand() * 1024;
+        const y = rand() * 1024;
+        ctx.fillStyle = "rgba(190,220,240,0.35)";
+        ctx.beginPath();
+        ctx.ellipse(x, y, 30 + rand() * 60, 12 + rand() * 30, rand() * Math.PI, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+}
+
+/**
+ * Sky dome gradient (top → bottom). Day: deep blue overhead fading to a warm haze. Night: inky
+ * overhead with the city's teal glow along the horizon, so towers read as silhouettes.
+ */
+export function skyTexture(variant: "night" | "day" = "day") {
+  return canvasTexture(4, 256, (ctx) => {
+    const g = ctx.createLinearGradient(0, 0, 0, 256);
+    const stops = variant === "day" ? ["#3f86c6", "#9ccbea", "#f3e3cf"] : ["#01040a", "#061a24", "#14424a"];
+    g.addColorStop(0, stops[0]);
+    g.addColorStop(0.55, stops[1]);
+    g.addColorStop(1, stops[2]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 4, 256);
+  });
+}

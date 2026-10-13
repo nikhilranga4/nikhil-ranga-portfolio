@@ -10,7 +10,7 @@ import { radialTexture } from "./textures";
 export const KEYBOARD_POS = new THREE.Vector3(0, 0.95, 4.4);
 const KEY_SCALE = 0.4;
 const PITCH = 0.46;
-const UNLIT = new THREE.Color("#2a3438");
+const UNLIT = new THREE.Color("#3a474c");
 const WHITE = new THREE.Color("#ffffff");
 
 interface KeySpec {
@@ -48,7 +48,7 @@ function NameKey({ spec, world, lit }: KeyProps) {
   const material = useKeyMaterial(UNLIT.getStyle());
   const legend = useLabelTexture(spec.enter ? "enter ↵" : spec.label, spec.width, "#ffffff");
   const legendMaterial = useMemo(
-    () => new THREE.MeshBasicMaterial({ map: legend, transparent: true, toneMapped: false, depthWrite: false, color: "#7d8a8c" }),
+    () => new THREE.MeshBasicMaterial({ map: legend, transparent: true, toneMapped: false, depthWrite: false, color: "#a9b8ba" }),
     [legend]
   );
   useEffect(() => () => legendMaterial.dispose(), [legendMaterial]);
@@ -93,7 +93,7 @@ function NameKey({ spec, world, lit }: KeyProps) {
       // Enter pulses, asking to be pressed
       m.color.copy(UNLIT).lerp(lit, 0.45 + 0.4 * Math.sin(t * 9));
     }
-    (legendMaterial.color as THREE.Color).set(typed ? dark : "#7d8a8c");
+    (legendMaterial.color as THREE.Color).set(typed ? dark : "#a9b8ba");
 
     // Launch: every key shoots up and tumbles away
     if (t >= INTRO.launch && !s.launched) {
@@ -163,7 +163,8 @@ export function IntroKeyboard({ world, ramp }: IntroKeyboardProps) {
 
   return (
     <>
-      <group ref={group} position={KEYBOARD_POS.toArray()} rotation={[0.18, 0, 0]}>
+      {/* Tipped toward the camera so the key tops (and the typing) face the viewer */}
+      <group ref={group} position={KEYBOARD_POS.toArray()} rotation={[0.55, 0, 0]}>
         <group ref={deck}>
           <RoundedBox args={[3.15, 0.16, 1.25]} radius={0.08} smoothness={4}>
             <meshMatcapMaterial color="#1c2427" matcap={sharedMatcap()} />

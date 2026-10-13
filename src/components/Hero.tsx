@@ -1,14 +1,4 @@
-import {
-  Component,
-  Suspense,
-  lazy,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   animate,
   motion,
@@ -21,20 +11,18 @@ import {
 } from "framer-motion";
 import { ArrowDownRight, ChevronDown, FileText, Github, Linkedin, Mail, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useIntroRevealed, useIntroSceneReady } from "@/lib/intro";
+import { useIntroRevealed } from "@/lib/intro";
 import { lenisRef } from "@/lib/lenis";
-import { setHeroReady, setIntroStage, useIntroStage, type IntroStage } from "@/lib/hero-state";
+import { heroProgress, setHeroReady, useIntroStage } from "@/lib/hero-state";
 import { useTheme } from "@/components/theme-provider";
 import { Magnetic } from "@/components/ui/magnetic";
 import Marquee from "@/components/ui/marquee";
 import { cn } from "@/lib/utils";
 
-// Start fetching the 3D world right away; the boot screen waits for it to compile
-const worldImport = import("@/components/three/world/HeroWorld");
-const HeroWorld = lazy(() => worldImport);
-
-/** Where the room's copy arrives (share of the pinned scroll) — matches SCROLL.room in the world */
-const ROOM_AT = 0.7;
+/** Where the room's copy arrives (share of the pinned scroll): matches SCROLL.room in the world */
+const ROOM_AT = 0.48;
+/** The copy leaves as the camera tilts down to the glass floor (SCROLL.tilt) */
+const ROOM_OUT: [number, number] = [0.69, 0.73];
 
 const ROLES = ["Full Stack Developer", "AI/ML Engineer", "React Native Dev", "Creative Coder"];
 const FIRST = "Nikhil";
@@ -72,19 +60,6 @@ function useNameShown() {
   return !!reduceMotion || stage === "named" || stage === "done";
 }
 
-/** If WebGL fails, drop the 3D and let the page carry on. */
-class SceneBoundary extends Component<{ children: ReactNode; onError: () => void }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  componentDidCatch() {
-    this.props.onError();
-  }
-  render() {
-    return this.state.failed ? null : this.props.children;
-  }
-}
 const LETTER_GAP = 0.06;
 
 const container: Variants = {
@@ -282,55 +257,36 @@ const Hero = () => {
   const portrait = useMediaQuery("(max-aspect-ratio: 1/1)");
   const reduceMotion = !!useReducedMotion();
   const revealed = useIntroRevealed();
-  const sceneReady = useIntroSceneReady();
-  const { colors, palette } = useTheme();
+  const { palette } = useTheme();
   const stage = useIntroStage();
   const introDone = reduceMotion || stage === "done";
-  const [active, setActive] = useState(true);
 
   const { scrollYProgress } = useScroll({ target: trackRef, offset: ["start start", "end end"] });
+  // The page-wide 3D world (mounted by the page shell) follows the hero's scroll
+  useEffect(() => {
+    heroProgress.set(scrollYProgress.get());
+    return scrollYProgress.on("change", (p) => heroProgress.set(p));
+  }, [scrollYProgress]);
   const [inRoom, setInRoom] = useState(false);
-  useMotionValueEvent(scrollYProgress, "change", (p) => setInRoom(p >= ROOM_AT - 0.03));
+  const [reachedRoom, setReachedRoom] = useState(false);
+  useMotionValueEvent(scrollYProgress, "change", (p) => {
+    setInRoom(p >= ROOM_AT - 0.03 && p < ROOM_OUT[1]);
+    setReachedRoom(p >= ROOM_AT - 0.03);
+  });
   const roomShown = reduceMotion || inRoom;
 
-  // The navbar waits for the room; give it back if the hero ever unmounts
-  useEffect(() => setHeroReady(roomShown), [roomShown]);
+  // The navbar waits for the room (and stays for the fall); give it back if the hero unmounts
+  useEffect(() => setHeroReady(reduceMotion || reachedRoom), [reduceMotion, reachedRoom]);
   useEffect(() => () => setHeroReady(true), []);
-
-  // Pause the 3D world while the hero is off-screen
-  useEffect(() => {
-    if (!trackRef.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setActive(entry.isIntersecting);
-        // While the opaque hero fills the screen, the page's decorative backdrop behind it is
-        // switched off (see Background / FloatingShapes): it can't be seen and costs frames
-        document.documentElement.dataset.hero = entry.intersectionRatio > 0.2 ? "on" : "off";
-      },
-      { threshold: [0, 0.2, 0.4] }
-    );
-    observer.observe(trackRef.current);
-    return () => {
-      observer.disconnect();
-      delete document.documentElement.dataset.hero;
-    };
-  }, []);
-
-  const onStage = useCallback((next: IntroStage) => setIntroStage(next), []);
-  // No WebGL: skip straight past the intro so the page never waits on it
-  const onSceneError = useCallback(() => {
-    setIntroStage("done");
-    sceneReady();
-  }, [sceneReady]);
 
   // Door beat: the name drifts apart and fades as the door opens
   const doorFade = useTransform(scrollYProgress, [0, 0.13], [1, 0]);
   const leftX = useTransform(scrollYProgress, [0, 0.13], ["0vw", "-7vw"]);
   const rightX = useTransform(scrollYProgress, [0, 0.13], ["0vw", "7vw"]);
   const cueFade = useTransform(scrollYProgress, [0, 0.04], [1, 0]);
-  // Room beat: a dark wash behind the copy, then a fade into the page as the pin releases
-  const washFade = useTransform(scrollYProgress, [ROOM_AT - 0.06, ROOM_AT + 0.04], [0, 1]);
-  const exitFade = useTransform(scrollYProgress, [0.9, 1], [0, 1]);
+  // Room beat: a dark wash behind the copy; both leave as the camera tilts to the floor
+  const washFade = useTransform(scrollYProgress, [ROOM_AT - 0.06, ROOM_AT + 0.04, ROOM_OUT[0], ROOM_OUT[1]], [0, 1, 1, 0]);
+  const roomOut = useTransform(scrollYProgress, ROOM_OUT, [1, 0]);
 
   /** Scrolls to where the room is fully in, playing the door on the way. */
   const enterRoom = (duration = 2.6) => {
@@ -343,32 +299,11 @@ const Hero = () => {
   };
 
   return (
-    <section
-      id="home"
-      className="relative z-20"
-      style={{ "--page-bg": "hsl(var(--background))" } as CSSProperties}
-    >
-      <div ref={trackRef} className={reduceMotion ? "h-[100svh]" : "h-[320svh] lg:h-[380svh]"}>
-        {/* A night scene in every theme: dark tokens in the visitor's palette */}
-        <div data-palette={palette} className="dark sticky top-0 h-[100svh] w-full overflow-hidden bg-[#020809] text-foreground">
-          <div aria-hidden className="absolute inset-0">
-            <SceneBoundary onError={onSceneError}>
-              <Suspense fallback={null}>
-                <HeroWorld
-                  progress={scrollYProgress}
-                  revealed={revealed}
-                  active={active}
-                  portrait={portrait}
-                  reduceMotion={reduceMotion}
-                  colors={colors}
-                  onReady={sceneReady}
-                  onStage={onStage}
-                />
-              </Suspense>
-            </SceneBoundary>
-          </div>
-          {/* Vignette (CSS: cheaper than a post-processing pass) */}
-          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_48%,rgb(2_8_9/0.72))]" />
+    <section id="home" className="relative z-20">
+      {/* Long pin: door → room → the glass floor cracks and shatters → the drop (see SCROLL) */}
+      <div ref={trackRef} className={reduceMotion ? "h-[100svh]" : "h-[440svh] lg:h-[520svh]"}>
+        {/* Transparent: the page-wide 3D world shows through. Dark tokens in the visitor's palette */}
+        <div data-palette={palette} className="dark sticky top-0 h-[100svh] w-full overflow-hidden text-foreground">
 
           {/* ── Door beat ── */}
           {reduceMotion && <h1 className="sr-only">{`${FIRST} ${LAST}`}</h1>}
@@ -437,6 +372,7 @@ const Hero = () => {
             onFocus={() => {
               if (!roomShown) enterRoom(1.2);
             }}
+            style={reduceMotion ? undefined : { opacity: roomOut }}
             className={cn(
               "absolute",
               roomShown ? "pointer-events-auto" : "pointer-events-none",
@@ -547,13 +483,6 @@ const Hero = () => {
             </div>
           </motion.div>
 
-          {!reduceMotion && (
-            <motion.div
-              aria-hidden
-              style={{ opacity: exitFade }}
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[var(--page-bg)]"
-            />
-          )}
         </div>
       </div>
 
