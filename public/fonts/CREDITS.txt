@@ -1,0 +1,2 @@
+name-3d.typeface.json: the letters N I K H L R A G of "helvetiker bold" (MgOpen Moderna Bold),
+as shipped with three.js (examples/fonts). License: see LICENSE-helvetiker.txt.
